@@ -117,21 +117,8 @@ const QuestionDetail = () => {
         
         setQuestion(question);
 
-        // Fetch answers
-        const { data: answers, error: answersError } = await supabase
-          .from("answers")
-          .select(`
-            *,
-            profiles!answers_author_id_fkey (
-              display_name,
-              avatar_url
-            )
-          `)
-          .eq("question_id", id)
-          .order("created_at", { ascending: false });
-
-        if (answersError) throw answersError;
-        setAnswers(answers || []);
+        // Fetch answers with real-time updates
+        await fetchAnswers();
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Question not found");
@@ -141,6 +128,29 @@ const QuestionDetail = () => {
     };
 
     fetchQuestionAndAnswers();
+
+    // Set up real-time subscription for answer changes
+    const channel = supabase
+      .channel('question-answers')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
+        (payload) => {
+          console.log('Answer updated in real-time:', payload);
+          fetchAnswers();
+        }
+      )
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
+        (payload) => {
+          console.log('Answer inserted in real-time:', payload);
+          fetchAnswers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id, user]);
 
   if (loading) {
@@ -368,17 +378,12 @@ const QuestionDetail = () => {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
-      // Update the local state first to prevent UI flickering
+      // Update the local state immediately to show the change
       setAnswers(prevAnswers => 
         prevAnswers.map(a => 
           a.id === answerId ? { ...a, ...updateData } : a
         )
       );
-      
-      // Also refresh the question data to update the badge
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
       
       toast({
         title: "Success",
@@ -415,7 +420,11 @@ const QuestionDetail = () => {
         .order("created_at", { ascending: false });
 
       if (answersError) throw answersError;
-      console.log('Fetched answers:', answers);
+      console.log('Fetched answers with approval status:', answers?.map(a => ({
+        id: a.id,
+        approved_by_author: a.approved_by_author,
+        teacher_approved: a.teacher_approved
+      })));
       setAnswers(answers || []);
     } catch (error) {
       console.error('Error fetching answers:', error);

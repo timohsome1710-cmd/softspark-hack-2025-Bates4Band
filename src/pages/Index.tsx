@@ -105,20 +105,29 @@ const Index = () => {
 
     loadQuestions();
 
-    // Set up real-time subscription for new questions and answer updates
+    // Set up real-time subscription for questions and answers
     const channel = supabase
-      .channel('questions-changes')
+      .channel('questions-answers-changes')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'questions' },
-        () => loadQuestions()
+        () => {
+          console.log('Question inserted, reloading...');
+          loadQuestions();
+        }
       )
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'answers' },
-        () => loadQuestions()
+        (payload) => {
+          console.log('Answer updated, reloading questions...', payload);
+          loadQuestions();
+        }
       )
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'answers' },
-        () => loadQuestions()
+        (payload) => {
+          console.log('Answer inserted, reloading questions...', payload);
+          loadQuestions();
+        }
       )
       .subscribe();
 
