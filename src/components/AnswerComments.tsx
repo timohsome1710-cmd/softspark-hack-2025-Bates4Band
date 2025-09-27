@@ -41,17 +41,30 @@ const AnswerComments = ({ answerId }: AnswerCommentsProps) => {
   const fetchComments = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First fetch comments
+      const { data: comments, error: commentsError } = await supabase
         .from("answer_comments")
-        .select(`
-          *,
-          profiles!answer_comments_author_id_fkey(display_name, avatar_url)
-        `)
+        .select("*")
         .eq("answer_id", answerId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      setComments(data || []);
+      if (commentsError) throw commentsError;
+
+      // Then fetch profile data for each comment
+      const commentsWithProfiles = await Promise.all((comments || []).map(async (comment) => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, avatar_url")
+          .eq("id", comment.author_id)
+          .single();
+
+        return {
+          ...comment,
+          profiles: profile || { display_name: "Unknown User", avatar_url: null }
+        };
+      }));
+
+      setComments(commentsWithProfiles);
     } catch (error) {
       console.error("Error fetching comments:", error);
     } finally {
@@ -87,15 +100,24 @@ const AnswerComments = ({ answerId }: AnswerCommentsProps) => {
           author_id: user.id,
           content: replyText.trim(),
         })
-        .select(`
-          *,
-          profiles!answer_comments_author_id_fkey(display_name, avatar_url)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
 
-      setComments(prev => [...prev, data]);
+      // Fetch the profile for the new comment
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      const newComment = {
+        ...data,
+        profiles: profile || { display_name: "Unknown User", avatar_url: null }
+      };
+
+      setComments(prev => [...prev, newComment]);
       setReplyText("");
       setShowReplyForm(false);
       

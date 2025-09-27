@@ -47,6 +47,13 @@ export type Database = {
             referencedRelation: "answers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "answer_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       answers: {
