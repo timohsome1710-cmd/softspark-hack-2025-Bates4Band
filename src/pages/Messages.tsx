@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Users, UserPlus } from "lucide-react";
+import { MessageCircle, Users, UserPlus, Home } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import FriendsSearch from "@/components/FriendsSearch";
 import FriendsList from "@/components/FriendsList";
@@ -37,6 +38,7 @@ interface ChatRoom {
 const Messages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,54 +94,78 @@ const Messages = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
+      
+      {/* Back to Home Button */}
+      <div className="container mx-auto px-4 pt-4">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate("/")}
+          className="mb-4 text-muted-foreground hover:text-foreground"
+        >
+          <Home className="h-4 w-4 mr-2" />
+          Back to Home
+        </Button>
+      </div>
+
+      <div className="container mx-auto px-4 pb-8">
+        <div className="grid lg:grid-cols-4 gap-8 h-[calc(100vh-14rem)]">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <Tabs defaultValue="chats" className="w-full h-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="chats">Chats</TabsTrigger>
-                <TabsTrigger value="friends">Friends</TabsTrigger>
-                <TabsTrigger value="search">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="chats" className="text-sm font-medium">Chats</TabsTrigger>
+                <TabsTrigger value="friends" className="text-sm font-medium">Friends</TabsTrigger>
+                <TabsTrigger value="search" className="text-sm font-medium">
                   <UserPlus className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="chats" className="h-full mt-4">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5" />
-                      Chats
+              <TabsContent value="chats" className="h-[calc(100%-4rem)] mt-0">
+                <Card className="h-full border-2">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <MessageCircle className="h-5 w-5 text-primary" />
+                      Your Chats
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto p-4">
                     {loading ? (
-                      <div className="text-center py-4">Loading chats...</div>
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <div className="text-muted-foreground">Loading chats...</div>
+                      </div>
                     ) : friends.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No friends to chat with yet</p>
+                      <div className="text-center py-12 text-muted-foreground">
+                        <MessageCircle className="h-16 w-16 mx-auto mb-6 opacity-30" />
+                        <h3 className="font-semibold text-lg mb-2">No friends to chat with yet</h3>
                         <p className="text-sm">Add friends to start chatting!</p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {friends.map((friend) => (
                           <Button
                             key={friend.friend_id}
                             variant={selectedFriend?.friend_id === friend.friend_id ? "secondary" : "ghost"}
-                            className="w-full justify-start p-3 h-auto"
+                            className={`w-full justify-start p-4 h-auto rounded-xl transition-all hover:shadow-md ${
+                              selectedFriend?.friend_id === friend.friend_id 
+                                ? "bg-primary/10 border border-primary/20" 
+                                : "hover:bg-accent/50"
+                            }`}
                             onClick={() => setSelectedFriend(friend)}
                           >
-                            <Avatar className="h-12 w-12 mr-3 border-2 border-border">
+                            <Avatar className="h-14 w-14 mr-4 border-2 border-border">
                               <AvatarImage src={friend.avatar_url || ""} alt={friend.display_name} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold">
+                              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold text-lg">
                                 {getInitials(friend.display_name)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left">
-                              <div className="font-medium">{friend.display_name}</div>
-                              <div className="text-sm text-muted-foreground">Online</div>
+                              <div className="font-semibold text-base mb-1">{friend.display_name}</div>
+                              <div className="text-sm text-muted-foreground">Click to start chatting</div>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <div className="w-3 h-3 bg-green-500 rounded-full mb-1"></div>
+                              <span className="text-xs text-muted-foreground">Online</span>
                             </div>
                           </Button>
                         ))}
@@ -149,29 +175,29 @@ const Messages = () => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="friends" className="h-full mt-4">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Friends
+              <TabsContent value="friends" className="h-[calc(100%-4rem)] mt-0">
+                <Card className="h-full border-2">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <Users className="h-5 w-5 text-primary" />
+                      Your Friends
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto p-4">
                     <FriendsList />
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="search" className="h-full mt-4">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <UserPlus className="h-5 w-5" />
-                      Add Friends
+              <TabsContent value="search" className="h-[calc(100%-4rem)] mt-0">
+                <Card className="h-full border-2">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                      Add New Friends
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto p-4">
                     <FriendsSearch />
                   </CardContent>
                 </Card>
@@ -187,13 +213,32 @@ const Messages = () => {
                 onBack={() => setSelectedFriend(null)} 
               />
             ) : (
-              <Card className="h-full flex items-center justify-center">
-                <div className="text-center">
-                  <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg font-semibold">Select a chat to start messaging</p>
-                  <p className="text-muted-foreground">
-                    Choose from your existing conversations or start a new one with friends
+              <Card className="h-full flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
+                <div className="text-center max-w-md">
+                  <MessageCircle className="h-20 w-20 text-muted-foreground/40 mx-auto mb-6" />
+                  <h2 className="text-xl font-semibold mb-3">Welcome to Messages</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Select a friend from your chat list to start messaging, or add new friends to expand your network!
                   </p>
+                  <div className="flex gap-3 justify-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        const friendsTab = document.querySelector('[data-state="inactive"][value="friends"]') as HTMLElement;
+                        if (friendsTab) friendsTab.click();
+                      }}
+                    >
+                      View Friends
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        const searchTab = document.querySelector('[data-state="inactive"][value="search"]') as HTMLElement;
+                        if (searchTab) searchTab.click();
+                      }}
+                    >
+                      Add Friends
+                    </Button>
+                  </div>
                 </div>
               </Card>
             )}
