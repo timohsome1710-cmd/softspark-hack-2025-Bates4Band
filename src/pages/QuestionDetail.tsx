@@ -329,7 +329,22 @@ const QuestionDetail = () => {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
-      // Refresh answers
+      // Update local state immediately for instant UI feedback
+      setAnswers(prevAnswers => 
+        prevAnswers.map(a => 
+          a.id === answerId 
+            ? { 
+                ...a, 
+                ...(approvalType === 'author' 
+                  ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
+                  : { teacher_approved: true, teacher_approved_by: user?.id }
+                )
+              }
+            : a
+        )
+      );
+
+      // Refresh answers from database to ensure consistency
       await fetchAnswers();
       
       toast({
