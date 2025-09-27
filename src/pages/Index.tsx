@@ -10,7 +10,7 @@ import QuestionCard from "@/components/QuestionCard";
 import SimplifiedLeaderboard from "@/components/SimplifiedLeaderboard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Question {
@@ -41,6 +41,8 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const questionsPerPage = 4;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -127,6 +129,26 @@ const Index = () => {
     return matchesCategory && matchesDifficulty && matchesSearch;
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
+  const startIndex = (currentPage - 1) * questionsPerPage;
+  const endIndex = startIndex + questionsPerPage;
+  const currentQuestions = filteredQuestions.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedDifficulty, searchTerm]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to questions section
+    const questionsSection = document.querySelector('[data-questions]');
+    if (questionsSection) {
+      questionsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -181,10 +203,70 @@ const Index = () => {
                 <div className="text-center py-12">
                   <div className="text-xl text-muted-foreground">Loading questions...</div>
                 </div>
-              ) : filteredQuestions.length > 0 ? (
-                filteredQuestions.map(question => (
-                  <QuestionCard key={question.id} question={question} />
-                ))
+              ) : currentQuestions.length > 0 ? (
+                <>
+                  {currentQuestions.map(question => (
+                    <QuestionCard key={question.id} question={question} />
+                  ))}
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="flex gap-1">
+                        {[...Array(totalPages)].map((_, index) => {
+                          const page = index + 1;
+                          const isCurrentPage = page === currentPage;
+                          
+                          // Show first page, last page, current page, and pages around current
+                          const showPage = page === 1 || page === totalPages || 
+                            (page >= currentPage - 1 && page <= currentPage + 1);
+                          
+                          if (!showPage) {
+                            // Show ellipsis
+                            if (page === currentPage - 2 || page === currentPage + 2) {
+                              return (
+                                <span key={page} className="px-2 py-1 text-muted-foreground">
+                                  ...
+                                </span>
+                              );
+                            }
+                            return null;
+                          }
+                          
+                          return (
+                            <Button
+                              key={page}
+                              variant={isCurrentPage ? "default" : "outline"}
+                              size="icon"
+                              onClick={() => goToPage(page)}
+                              className={isCurrentPage ? "bg-primary text-primary-foreground" : ""}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🔍</div>
