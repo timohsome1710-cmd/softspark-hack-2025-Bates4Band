@@ -129,8 +129,24 @@ const Index = () => {
 
   // Filter questions based on selected criteria
   const filteredQuestions = questions.filter(question => {
-    const matchesCategory = selectedCategory === "all" || 
-      question.category.toLowerCase() === selectedCategory.toLowerCase();
+    let matchesCategory = selectedCategory === "all";
+    
+    if (!matchesCategory) {
+      const questionCategory = question.category.toLowerCase();
+      const selectedCat = selectedCategory.toLowerCase();
+      
+      // Handle category variations and partial matches
+      if (selectedCat === "mathematics") {
+        matchesCategory = questionCategory.includes("math");
+      } else if (selectedCat === "science") {
+        matchesCategory = questionCategory.includes("science");
+      } else if (selectedCat === "social studies") {
+        matchesCategory = questionCategory.includes("social") || questionCategory.includes("studies");
+      } else {
+        matchesCategory = questionCategory === selectedCat;
+      }
+    }
+    
     const matchesDifficulty = selectedDifficulty === "all" || 
       question.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
     const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
