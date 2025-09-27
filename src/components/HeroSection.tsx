@@ -110,8 +110,8 @@ const HeroSection = () => {
                 <div className="text-sm text-primary-foreground/70">Questions Solved</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold text-primary-foreground">{stats.this_week_questions}</div>
-                <div className="text-sm text-primary-foreground/70">This Week</div>
+                <div className="text-2xl font-bold text-primary-foreground">0</div>
+                <div className="text-sm text-primary-foreground/70">Seasons Passed</div>
               </div>
             </div>
           </div>

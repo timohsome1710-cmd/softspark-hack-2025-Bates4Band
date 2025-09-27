@@ -206,7 +206,7 @@ const SimplifiedLeaderboard = () => {
         <Button 
           variant="outline" 
           size="sm"
-          className="w-full mt-3 text-xs"
+          className="w-full mt-3 text-xs text-foreground border-border hover:bg-accent hover:text-accent-foreground"
           onClick={() => navigate("/leaderboard")}
         >
           View Full Leaderboard
