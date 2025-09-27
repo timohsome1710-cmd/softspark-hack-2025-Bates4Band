@@ -77,23 +77,15 @@ const Index = () => {
 
           const { data: approvedAnswers } = await supabase
             .from("answers")
-            .select("id")
+            .select("id, approved_by_author, teacher_approved")
             .eq("question_id", question.id)
-            .eq("approved_by_author", true)
-            .limit(1);
-
-          const { data: teacherApprovedAnswers } = await supabase
-            .from("answers")
-            .select("id")
-            .eq("question_id", question.id)
-            .eq("teacher_approved", true)
-            .limit(1);
+            .or("approved_by_author.eq.true,teacher_approved.eq.true");
 
           return {
             ...question,
             answer_count: count || 0,
-            has_approved_answer: (approvedAnswers?.length || 0) > 0,
-            has_teacher_approved_answer: (teacherApprovedAnswers?.length || 0) > 0,
+            has_approved_answer: (approvedAnswers?.some(a => a.approved_by_author) || false),
+            has_teacher_approved_answer: (approvedAnswers?.some(a => a.teacher_approved) || false),
             author: question.profiles
           };
         }));

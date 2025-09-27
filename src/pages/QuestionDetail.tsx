@@ -112,6 +112,9 @@ const QuestionDetail = () => {
           setError("Question not found");
           return;
         }
+        // Increment question view count
+        await supabase.rpc('increment_question_view', { question_id: id });
+        
         setQuestion(question);
 
         // Fetch answers
@@ -344,7 +347,7 @@ const QuestionDetail = () => {
         ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
         : { teacher_approved: true, teacher_approved_by: user?.id };
 
-      console.log('Updating with data:', updateData);
+      console.log('Updating answer with data:', updateData);
 
       const { error } = await supabase
         .from('answers')
@@ -356,7 +359,7 @@ const QuestionDetail = () => {
         throw error;
       }
 
-      console.log('Database update successful');
+      console.log('Database update successful - answer approved');
 
       // Award EXP to answer author when approved (only once)
       if (answer && !answer.approved_by_author && approvalType === 'author') {
@@ -372,6 +375,11 @@ const QuestionDetail = () => {
         )
       );
       
+      // Also refresh the question data to update the badge
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
       toast({
         title: "Success",
         description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully! The answerer received ${getEXPReward('approved_answer', question.difficulty)} EXP!`,
@@ -386,9 +394,9 @@ const QuestionDetail = () => {
     }
   };
 
-  // Helper functions to check if answers are already approved
-  const hasAuthorApprovedAnswer = answers.some(a => a.approved_by_author);
-  const hasTeacherApprovedAnswer = answers.some(a => a.teacher_approved);
+  // Helper functions to check if answers are already approved - recalculate each time
+  const hasAuthorApprovedAnswer = answers.some(a => a.approved_by_author === true);
+  const hasTeacherApprovedAnswer = answers.some(a => a.teacher_approved === true);
 
   const fetchAnswers = async () => {
     if (!id) return;
