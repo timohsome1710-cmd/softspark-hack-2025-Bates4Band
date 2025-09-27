@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
+import AnswerComments from "@/components/AnswerComments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -214,6 +215,16 @@ const QuestionDetail = () => {
       toast({
         title: "Authentication required",
         description: "Please log in to submit an answer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prevent question author from answering their own question
+    if (user.id === question?.author_id) {
+      toast({
+        title: "Cannot answer own question",
+        description: "You cannot answer your own question.",
         variant: "destructive",
       });
       return;
@@ -519,9 +530,12 @@ const QuestionDetail = () => {
                                     Teacher Approve
                                   </Button>
                                 )}
-                              </div>
-                            </div>
-                         </div>
+                               </div>
+                               
+                               {/* Reply System */}
+                               <AnswerComments answerId={answer.id} />
+                             </div>
+                          </div>
                        </CardContent>
                      </Card>
                    ))}
@@ -530,11 +544,12 @@ const QuestionDetail = () => {
             </div>
 
             {/* Answer Form */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Your Answer</h3>
-              </CardHeader>
-              <CardContent>
+            {user && user.id !== question?.author_id && (
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-semibold">Your Answer</h3>
+                </CardHeader>
+                <CardContent>
                 <div className="space-y-4">
                   <Textarea
                     placeholder="Write your answer here... Be detailed and helpful!"
@@ -571,6 +586,17 @@ const QuestionDetail = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
+            
+            {/* Message for question authors */}
+            {user && user.id === question?.author_id && (
+              <Card>
+                <CardContent className="pt-6 text-center text-muted-foreground">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>As the question author, you cannot answer your own question. You can accept answers from other users.</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}

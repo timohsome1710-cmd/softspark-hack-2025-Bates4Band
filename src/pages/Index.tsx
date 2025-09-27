@@ -30,6 +30,7 @@ interface Question {
   };
   answer_count?: number;
   has_approved_answer?: boolean;
+  has_teacher_approved_answer?: boolean;
 }
 
 const Index = () => {
@@ -134,8 +135,10 @@ const Index = () => {
       question.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
     const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       question.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTeacherFilter = teacherApprovedFilter === "all" || 
+      (teacherApprovedFilter === "teacher-approved" && question.has_teacher_approved_answer);
     
-    return matchesCategory && matchesDifficulty && matchesSearch;
+    return matchesCategory && matchesDifficulty && matchesSearch && matchesTeacherFilter;
   });
 
   // Calculate pagination
@@ -147,7 +150,7 @@ const Index = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedDifficulty, searchTerm]);
+  }, [selectedCategory, selectedDifficulty, searchTerm, teacherApprovedFilter]);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -191,16 +194,13 @@ const Index = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <select
-                value={teacherApprovedFilter}
-                onChange={(e) => setTeacherApprovedFilter(e.target.value)}
-                className="px-3 py-2 border border-input bg-background text-sm rounded-md"
+              <Button
+                variant={teacherApprovedFilter === "teacher-approved" ? "default" : "outline"}
+                onClick={() => setTeacherApprovedFilter(teacherApprovedFilter === "all" ? "teacher-approved" : "all")}
+                className="flex items-center gap-2"
               >
-                <option value="all">All Questions</option>
-                <option value="teacher-approved">Teacher Approved</option>
-              </select>
-              <Button variant="outline" size="icon">
                 <Filter className="h-4 w-4" />
+                {teacherApprovedFilter === "teacher-approved" ? "Teacher Approved" : "All Questions"}
               </Button>
             </div>
 
