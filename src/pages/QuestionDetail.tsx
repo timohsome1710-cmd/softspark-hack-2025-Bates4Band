@@ -291,6 +291,27 @@ const QuestionDetail = () => {
   };
 
   const handleApproveAnswer = async (answerId: string, approvalType: 'author' | 'teacher') => {
+    // Only question author can approve answers (author type)
+    if (approvalType === 'author' && user?.id !== question?.author_id) {
+      toast({
+        title: "Access Denied",
+        description: "Only the question author can approve answers",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if answer is from question author (they can't approve their own answer)
+    const answer = answers.find(a => a.id === answerId);
+    if (answer?.author_id === question?.author_id) {
+      toast({
+        title: "Cannot Approve",
+        description: "Question authors cannot approve their own answers",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const updateData = approvalType === 'author' 
         ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
@@ -303,9 +324,8 @@ const QuestionDetail = () => {
 
       if (error) throw error;
 
-      // Award EXP to answer author when approved
-      const answer = answers.find(a => a.id === answerId);
-      if (answer) {
+      // Award EXP to answer author when approved (only once)
+      if (answer && !answer.approved_by_author) {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
@@ -314,7 +334,7 @@ const QuestionDetail = () => {
       
       toast({
         title: "Success",
-        description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully! The answerer received bonus EXP!`,
+        description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully! The answerer received ${getEXPReward('approved_answer', question.difficulty)} EXP!`,
       });
     } catch (error) {
       console.error('Error approving answer:', error);
@@ -400,7 +420,7 @@ const QuestionDetail = () => {
     const baseRewards = {
       question: { easy: 25, medium: 50, hard: 75 },
       answer: { easy: 30, medium: 50, hard: 70 },
-      approved_answer: { easy: 20, medium: 30, hard: 50 } // Bonus for getting approved
+      approved_answer: { easy: 50, medium: 100, hard: 150 } // Updated to match difficulty-based rewards
     };
     
     return baseRewards[action][difficulty as keyof typeof baseRewards[typeof action]] || 50;
@@ -430,9 +450,9 @@ const QuestionDetail = () => {
                        <Badge variant="outline" className="text-xs">
                          {question.category}
                        </Badge>
-                       <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
-                         {question.difficulty} • 100 EXP
-                       </Badge>
+                        <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
+                          {question.difficulty} • {getEXPReward('approved_answer', question.difficulty)} EXP
+                        </Badge>
                        {question.is_verified && (
                         <Badge variant="secondary" className="text-xs bg-level-gold/20 text-level-gold border-level-gold/30">
                           <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -593,6 +613,7 @@ const QuestionDetail = () => {
                               
                               {/* Approval buttons */}
                               <div className="flex gap-2 mt-3">
+                                {/* Only show approve button for question author and non-author answers */}
                                 {user && question.author_id === user.id && !answer.approved_by_author && answer.author_id !== user.id && (
                                   <Button
                                     size="sm"
@@ -691,10 +712,10 @@ const QuestionDetail = () => {
                 <h3 className="font-semibold">Question Stats</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Views</span>
-                  <span className="font-medium">127</span>
-                </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Views</span>
+                    <span className="font-medium">{question.view_count || 0}</span>
+                  </div>
                  <div className="flex items-center justify-between">
                    <span className="text-muted-foreground">Answers</span>
                    <span className="font-medium">{answers.length}</span>
@@ -702,7 +723,7 @@ const QuestionDetail = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">EXP Reward</span>
                     <Badge className={getDifficultyColor(question.difficulty)}>
-                      {getEXPReward('question', question.difficulty)} EXP
+                      {getEXPReward('approved_answer', question.difficulty)} EXP
                     </Badge>
                   </div>
                 

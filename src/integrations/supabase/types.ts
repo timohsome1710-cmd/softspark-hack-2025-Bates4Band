@@ -287,6 +287,27 @@ export type Database = {
         }
         Relationships: []
       }
+      question_views: {
+        Row: {
+          id: string
+          question_id: string
+          viewed_at: string
+          viewer_id: string
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          viewed_at?: string
+          viewer_id: string
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          viewed_at?: string
+          viewer_id?: string
+        }
+        Relationships: []
+      }
       questions: {
         Row: {
           author_id: string
@@ -302,6 +323,7 @@ export type Database = {
           title: string
           updated_at: string
           videos: string[] | null
+          view_count: number
         }
         Insert: {
           author_id: string
@@ -317,6 +339,7 @@ export type Database = {
           title: string
           updated_at?: string
           videos?: string[] | null
+          view_count?: number
         }
         Update: {
           author_id?: string
@@ -332,6 +355,7 @@ export type Database = {
           title?: string
           updated_at?: string
           videos?: string[] | null
+          view_count?: number
         }
         Relationships: [
           {
@@ -469,6 +493,10 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      increment_question_view: {
+        Args: { question_id: string }
+        Returns: undefined
       }
       is_chat_room_member: {
         Args: { room_id: string; user_id: string }
