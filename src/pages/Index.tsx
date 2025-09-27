@@ -128,6 +128,10 @@ const Index = () => {
         { event: 'INSERT', schema: 'public', table: 'answers' },
         () => loadQuestions()
       )
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'questions' },
+        () => loadQuestions()
+      )
       .subscribe();
 
     return () => {

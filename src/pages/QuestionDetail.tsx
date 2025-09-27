@@ -94,8 +94,8 @@ const QuestionDetail = () => {
           }
         }
 
-        // Fetch question
-        const { data: question, error: questionError } = await supabase
+        // Fetch question with approval status
+        const { data: questionData, error: questionError } = await supabase
           .from("questions")
           .select(`
             *,
@@ -108,11 +108,39 @@ const QuestionDetail = () => {
           .maybeSingle();
 
         if (questionError) throw questionError;
-        if (!question) {
+        if (!questionData) {
           setError("Question not found");
           return;
         }
-        setQuestion(question);
+
+        // Get answer counts and approval status for the question
+        const { count } = await supabase
+          .from("answers")
+          .select("*", { count: "exact", head: true })
+          .eq("question_id", questionData.id);
+
+        const { data: approvedAnswers } = await supabase
+          .from("answers")
+          .select("id")
+          .eq("question_id", questionData.id)
+          .eq("approved_by_author", true)
+          .limit(1);
+
+        const { data: teacherApprovedAnswers } = await supabase
+          .from("answers")
+          .select("id")
+          .eq("question_id", questionData.id)
+          .eq("teacher_approved", true)
+          .limit(1);
+
+        const questionWithStatus = {
+          ...questionData,
+          answer_count: count || 0,
+          has_approved_answer: (approvedAnswers?.length || 0) > 0,
+          has_teacher_approved_answer: (teacherApprovedAnswers?.length || 0) > 0,
+        };
+
+        setQuestion(questionWithStatus);
 
         // Fetch answers
         const { data: answers, error: answersError } = await supabase
@@ -138,6 +166,23 @@ const QuestionDetail = () => {
     };
 
     fetchQuestionAndAnswers();
+
+    // Set up real-time subscription for answer changes
+    const channel = supabase
+      .channel('answer-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
+        () => fetchQuestionAndAnswers()
+      )
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
+        () => fetchQuestionAndAnswers()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id, user]);
 
   if (loading) {
@@ -499,19 +544,19 @@ const QuestionDetail = () => {
                         <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
                           {question.difficulty} • {getEXPReward('approved_answer', question.difficulty)} EXP
                         </Badge>
-                        {hasAuthorApprovedAnswer && (
-                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
-                           <CheckCircle2 className="mr-1 h-3 w-3" />
-                           Solved
-                         </Badge>
-                       )}
-                       {question.is_verified && (
-                        <Badge variant="secondary" className="text-xs bg-level-gold/20 text-level-gold border-level-gold/30">
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                          Verified
-                        </Badge>
-                      )}
-                     </div>
+                        {question.has_approved_answer && (
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Solved
+                          </Badge>
+                        )}
+                        {question.has_teacher_approved_answer && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Teacher Approved
+                          </Badge>
+                        )}
+                      </div>
                     <h1 className="text-2xl font-bold text-foreground mb-4">
                       {question.title}
                     </h1>
