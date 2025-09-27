@@ -1,16 +1,24 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Send, Users, UserPlus, Home, ArrowLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageCircle, Users, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import FriendsSearch from "@/components/FriendsSearch";
 import FriendsList from "@/components/FriendsList";
+import ChatConversation from "@/components/ChatConversation";
+
+interface Friend {
+  friend_id: string;
+  display_name: string;
+  avatar_url: string;
+  status: string;
+  last_active: string;
+}
 
 interface ChatRoom {
   id: string;
@@ -18,118 +26,77 @@ interface ChatRoom {
   group_name?: string;
   user1_id?: string;
   user2_id?: string;
-}
-
-interface Message {
-  id: string;
-  content: string;
-  sender_id: string;
-  created_at: string;
+  friend?: Friend;
+  last_message?: {
+    content: string;
+    created_at: string;
+    sender_id: string;
+  };
 }
 
 const Messages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
-    const loadChatRooms = async () => {
+    const loadFriends = async () => {
       try {
-        const { data, error } = await supabase
-          .from("chat_rooms")
-          .select("*")
-          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-          .order("updated_at", { ascending: false });
-
+        const { data, error } = await supabase.rpc('get_user_friends');
+        
         if (error) throw error;
-        setChatRooms(data || []);
+        setFriends(data || []);
       } catch (error) {
-        console.error("Error loading chat rooms:", error);
+        console.error("Error loading friends:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load friends",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    loadChatRooms();
-  }, [user]);
+    loadFriends();
 
-  useEffect(() => {
-    if (!selectedRoom || !user) return;
-
-    const loadMessages = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("chat_room_id", selectedRoom.id)
-          .order("created_at", { ascending: true });
-
-        if (error) throw error;
-        setMessages(data || []);
-      } catch (error) {
-        console.error("Error loading messages:", error);
-      }
-    };
-
-    loadMessages();
-
-    // Set up real-time subscription
+    // Set up real-time subscription for friends updates
     const channel = supabase
-      .channel(`room-${selectedRoom.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_room_id=eq.${selectedRoom.id}`
-      }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message]);
-      })
+      .channel('friends-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friends',
+        },
+        () => {
+          loadFriends();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedRoom, user]);
+  }, [user]);
 
-  const sendMessage = async () => {
-    if (!selectedRoom || !user || !newMessage.trim()) return;
-
-    try {
-      const { error } = await supabase
-        .from("messages")
-        .insert({
-          chat_room_id: selectedRoom.id,
-          sender_id: user.id,
-          content: newMessage.trim(),
-        });
-
-      if (error) throw error;
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
-    }
+  const getInitials = (name: string) => {
+    return name?.split(' ').map(word => word[0]?.toUpperCase()).join('').slice(0, 2) || 'U';
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <Tabs defaultValue="chats" className="w-full">
+            <Tabs defaultValue="chats" className="w-full h-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="chats">Chats</TabsTrigger>
                 <TabsTrigger value="friends">Friends</TabsTrigger>
@@ -138,32 +105,42 @@ const Messages = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="chats">
-                <Card>
+              <TabsContent value="chats" className="h-full mt-4">
+                <Card className="h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
+                      <MessageCircle className="h-5 w-5" />
                       Chats
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
                     {loading ? (
                       <div className="text-center py-4">Loading chats...</div>
-                    ) : chatRooms.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No chats yet
+                    ) : friends.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No friends to chat with yet</p>
+                        <p className="text-sm">Add friends to start chatting!</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {chatRooms.map((room) => (
+                        {friends.map((friend) => (
                           <Button
-                            key={room.id}
-                            variant={selectedRoom?.id === room.id ? "default" : "ghost"}
-                            className="w-full justify-start"
-                            onClick={() => setSelectedRoom(room)}
+                            key={friend.friend_id}
+                            variant={selectedFriend?.friend_id === friend.friend_id ? "secondary" : "ghost"}
+                            className="w-full justify-start p-3 h-auto"
+                            onClick={() => setSelectedFriend(friend)}
                           >
-                            <MessageCircle className="mr-2 h-4 w-4" />
-                            {room.is_group ? room.group_name : "Direct Chat"}
+                            <Avatar className="h-12 w-12 mr-3 border-2 border-border">
+                              <AvatarImage src={friend.avatar_url || ""} alt={friend.display_name} />
+                              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold">
+                                {getInitials(friend.display_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                              <div className="font-medium">{friend.display_name}</div>
+                              <div className="text-sm text-muted-foreground">Online</div>
+                            </div>
                           </Button>
                         ))}
                       </div>
@@ -172,29 +149,29 @@ const Messages = () => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="friends">
-                <Card>
+              <TabsContent value="friends" className="h-full mt-4">
+                <Card className="h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
                       Friends
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
                     <FriendsList />
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="search">
-                <Card>
+              <TabsContent value="search" className="h-full mt-4">
+                <Card className="h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <UserPlus className="h-5 w-5" />
                       Add Friends
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
                     <FriendsSearch />
                   </CardContent>
                 </Card>
@@ -203,58 +180,14 @@ const Messages = () => {
           </div>
 
           {/* Main Chat Area */}
-          <div className="lg:col-span-3">
-            {selectedRoom ? (
-              <Card className="h-[600px] flex flex-col">
-                <CardHeader>
-                  <CardTitle>
-                    {selectedRoom.is_group ? selectedRoom.group_name : "Direct Chat"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.sender_id === user?.id ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                            message.sender_id === user?.id
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <p>{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          sendMessage();
-                        }
-                      }}
-                    />
-                    <Button onClick={sendMessage} disabled={!newMessage.trim()}>
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="lg:col-span-3 h-full">
+            {selectedFriend ? (
+              <ChatConversation 
+                friend={selectedFriend} 
+                onBack={() => setSelectedFriend(null)} 
+              />
             ) : (
-              <Card className="h-[600px] flex items-center justify-center">
+              <Card className="h-full flex items-center justify-center">
                 <div className="text-center">
                   <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                   <p className="text-lg font-semibold">Select a chat to start messaging</p>
