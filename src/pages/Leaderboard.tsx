@@ -122,13 +122,13 @@ const Leaderboard = () => {
 
   const getTrophyRankInfo = (rank: string) => {
     switch (rank) {
-      case 'radiant': return { color: 'text-purple-500', exp: '20,000+ EXP' };
-      case 'diamond': return { color: 'text-blue-500', exp: '10,000+ EXP' };
-      case 'platinum': return { color: 'text-cyan-500', exp: '5,000+ EXP' };
-      case 'gold': return { color: 'text-yellow-500', exp: '2,000+ EXP' };
-      case 'silver': return { color: 'text-gray-400', exp: '500+ EXP' };
-      case 'bronze': return { color: 'text-orange-500', exp: '0+ EXP' };
-      default: return { color: 'text-muted-foreground', exp: '0 EXP' };
+      case 'radiant': return { color: 'text-purple-600 bg-purple-100', border: 'border-purple-300', exp: '20,000+ EXP', badge: 'bg-gradient-to-r from-purple-500 to-pink-500' };
+      case 'diamond': return { color: 'text-blue-600 bg-blue-100', border: 'border-blue-300', exp: '10,000+ EXP', badge: 'bg-gradient-to-r from-blue-500 to-cyan-500' };
+      case 'platinum': return { color: 'text-cyan-600 bg-cyan-100', border: 'border-cyan-300', exp: '5,000+ EXP', badge: 'bg-gradient-to-r from-cyan-500 to-teal-500' };
+      case 'gold': return { color: 'text-yellow-600 bg-yellow-100', border: 'border-yellow-300', exp: '2,000+ EXP', badge: 'bg-gradient-to-r from-yellow-500 to-orange-500' };
+      case 'silver': return { color: 'text-gray-600 bg-gray-100', border: 'border-gray-300', exp: '500+ EXP', badge: 'bg-gradient-to-r from-gray-400 to-gray-500' };
+      case 'bronze': return { color: 'text-orange-600 bg-orange-100', border: 'border-orange-300', exp: '0+ EXP', badge: 'bg-gradient-to-r from-orange-500 to-red-500' };
+      default: return { color: 'text-muted-foreground bg-muted', border: 'border-muted', exp: '0 EXP', badge: 'bg-muted' };
     }
   };
 
@@ -221,12 +221,12 @@ const Leaderboard = () => {
                   ].map((trophy) => {
                     const info = getTrophyRankInfo(trophy.rank);
                     return (
-                      <div key={trophy.rank} className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full bg-current ${info.color}`} />
-                          <span className="text-sm">{trophy.name}</span>
+                      <div key={trophy.rank} className={`flex items-center justify-between py-2 px-3 rounded-lg ${info.color} ${info.border} border transition-all hover:scale-105`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${info.badge}`} />
+                          <span className="font-medium">{trophy.name}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{info.exp}</span>
+                        <span className="text-xs font-semibold">{info.exp}</span>
                       </div>
                     );
                   })}
@@ -266,8 +266,10 @@ const Leaderboard = () => {
                         {leaderboardData.map((entry) => (
                           <div
                             key={entry.user_id}
-                            className={`flex items-center justify-between p-3 rounded-lg border hover:bg-accent/30 transition-colors ${
-                              entry.user_id === user.id ? 'ring-2 ring-primary bg-primary/5' : 'bg-card'
+                            className={`flex items-center justify-between p-4 rounded-xl border-2 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                              entry.user_id === user.id 
+                                ? 'ring-2 ring-primary bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30' 
+                                : 'bg-gradient-to-r from-card to-muted/20 border-border hover:border-primary/20'
                             }`}
                           >
                             <div className="flex items-center gap-3">
@@ -293,7 +295,7 @@ const Leaderboard = () => {
                                   </Badge>
                                   <Badge 
                                     variant="outline" 
-                                    className={`uppercase text-xs ${getTrophyRankInfo(entry.trophy_rank).color}`}
+                                    className={`uppercase text-xs font-bold ${getTrophyRankInfo(entry.trophy_rank).color} ${getTrophyRankInfo(entry.trophy_rank).border} border`}
                                   >
                                     {entry.trophy_rank}
                                   </Badge>
@@ -305,8 +307,10 @@ const Leaderboard = () => {
                             </div>
 
                             <div className="text-right">
-                              <div className="text-lg font-bold text-secondary">{entry.seasonal_exp}</div>
-                              <div className="text-xs text-muted-foreground">Season EXP</div>
+                              <div className="text-xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+                                {entry.seasonal_exp}
+                              </div>
+                              <div className="text-xs text-muted-foreground font-medium">Season EXP</div>
                             </div>
                           </div>
                         ))}
@@ -327,12 +331,14 @@ const Leaderboard = () => {
                       {leaderboardData
                         .sort((a, b) => b.total_exp - a.total_exp)
                         .map((entry, index) => (
-                          <div
-                            key={`alltime-${entry.user_id}`}
-                            className={`flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors ${
-                              entry.user_id === user.id ? 'ring-2 ring-primary' : ''
-                            }`}
-                          >
+                           <div
+                             key={`alltime-${entry.user_id}`}
+                             className={`flex items-center justify-between p-5 rounded-2xl border-2 bg-gradient-to-r hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                               entry.user_id === user.id 
+                                 ? 'ring-2 ring-primary from-primary/10 to-secondary/10 border-primary/30' 
+                                 : 'from-card to-muted/30 border-border hover:border-secondary/30'
+                             }`}
+                           >
                             <div className="flex items-center gap-4">
                               <div className="flex items-center justify-center w-10">
                                 <span className="text-lg font-bold text-muted-foreground">{index + 1}</span>
@@ -362,10 +368,12 @@ const Leaderboard = () => {
                               </div>
                             </div>
 
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-primary">{entry.total_exp}</div>
-                              <div className="text-sm text-muted-foreground">Total EXP</div>
-                            </div>
+                             <div className="text-right">
+                               <div className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                 {entry.total_exp}
+                               </div>
+                               <div className="text-sm text-muted-foreground font-medium">Total EXP</div>
+                             </div>
                           </div>
                         ))}
                     </div>

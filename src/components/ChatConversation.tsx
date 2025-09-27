@@ -312,7 +312,7 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
                             </p>
                             {isOwnMessage && (
                               <button
-                                className="opacity-0 group-hover:opacity-100 text-[10px] underline-offset-2 hover:underline"
+                                className="opacity-60 hover:opacity-100 text-[10px] underline-offset-2 hover:underline transition-opacity text-muted-foreground hover:text-foreground"
                                 onClick={() => startEdit(message)}
                               >
                                 Edit

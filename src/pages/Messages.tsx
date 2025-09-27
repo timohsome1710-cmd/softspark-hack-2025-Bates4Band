@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Users, UserPlus, Home } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
-import FriendsSearch from "@/components/FriendsSearch";
-import FriendsList from "@/components/FriendsList";
-import ChatConversation from "@/components/ChatConversation";
-import FriendRequests from "@/components/FriendRequests";
+import MessagesPopup from "@/components/MessagesPopup";
 
 interface Friend {
   friend_id: string;
@@ -22,75 +17,63 @@ interface Friend {
   last_active: string;
 }
 
-interface ChatRoom {
-  id: string;
-  is_group: boolean;
-  group_name?: string;
-  user1_id?: string;
-  user2_id?: string;
-  friend?: Friend;
-  last_message?: {
-    content: string;
-    created_at: string;
-    sender_id: string;
-  };
-}
-
 const Messages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
 
-    const loadFriends = async () => {
+    const loadStats = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_user_friends');
+        // Load friends count
+        const { data: friendsData } = await supabase.rpc('get_user_friends');
+        setFriends(friendsData || []);
+
+        // Load unread messages count
+        const { count: unreadMessages } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
         
-        if (error) throw error;
-        setFriends(data || []);
+        setUnreadCount(unreadMessages || 0);
+
+        // Load friend requests count
+        const { count: requestsCount } = await supabase
+          .from('friends')
+          .select('*', { count: 'exact', head: true })
+          .eq('friend_id', user.id)
+          .eq('status', 'pending');
+
+        setFriendRequestCount(requestsCount || 0);
       } catch (error) {
-        console.error("Error loading friends:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load friends",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+        console.error("Error loading stats:", error);
       }
     };
 
-    loadFriends();
+    loadStats();
 
-    // Set up real-time subscription for friends updates
-    const channel = supabase
+    // Set up real-time subscriptions
+    const friendsChannel = supabase
       .channel('friends-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friends',
-        },
-        () => {
-          loadFriends();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, loadStats)
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel('messages-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, loadStats)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(friendsChannel);
+      supabase.removeChannel(messagesChannel);
     };
   }, [user]);
-
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(word => word[0]?.toUpperCase()).join('').slice(0, 2) || 'U';
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,161 +93,111 @@ const Messages = () => {
 
       <div className="container mx-auto px-4 pb-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
-          <p className="text-muted-foreground text-sm">Connect and chat with your friends</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Messages & Friends</h1>
+          <p className="text-muted-foreground">Connect and chat with your friends</p>
         </div>
-        <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-16rem)]">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Tabs defaultValue="chats" className="w-full h-full">
-              <TabsList className="grid w-full grid-cols-4 mb-3">
-                <TabsTrigger value="chats" className="text-xs font-medium">Chats</TabsTrigger>
-                <TabsTrigger value="friends" className="text-xs font-medium">Friends</TabsTrigger>
-                <TabsTrigger value="requests" className="text-xs font-medium">Requests</TabsTrigger>
-                <TabsTrigger value="search" className="text-xs font-medium">
-                  <UserPlus className="h-4 w-4" />
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="chats" className="h-[calc(100%-3rem)] mt-0">
-                <Card className="h-full border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <MessageCircle className="h-4 w-4 text-primary" />
-                      Your Chats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto p-3">
-                    {loading ? (
-                      <div className="text-center py-6">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-3"></div>
-                        <div className="text-sm text-muted-foreground">Loading chats...</div>
-                      </div>
-                    ) : friends.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                        <h3 className="font-semibold text-base mb-2">No friends to chat with yet</h3>
-                        <p className="text-sm">Add friends to start chatting!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {friends.map((friend) => (
-                          <Button
-                            key={friend.friend_id}
-                            variant={selectedFriend?.friend_id === friend.friend_id ? "secondary" : "ghost"}
-                            className={`w-full justify-start p-3 h-auto rounded-lg transition-all hover:shadow-sm ${
-                              selectedFriend?.friend_id === friend.friend_id 
-                                ? "bg-primary/10 border border-primary/20" 
-                                : "hover:bg-accent/50"
-                            }`}
-                            onClick={() => setSelectedFriend(friend)}
-                          >
-                            <Avatar className="h-10 w-10 mr-3 border border-border">
-                              <AvatarImage src={friend.avatar_url || ""} alt={friend.display_name} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold text-sm">
-                                {getInitials(friend.display_name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-left">
-                              <div className="font-medium text-sm mb-1">{friend.display_name}</div>
-                              <div className="text-xs text-muted-foreground">Click to start chatting</div>
-                            </div>
-                            <div className="flex flex-col items-end">
-                              <div className="w-2 h-2 bg-green-500 rounded-full mb-1"></div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
-              <TabsContent value="friends" className="h-[calc(100%-3rem)] mt-0">
-                <Card className="h-full border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-4 w-4 text-primary" />
-                      Your Friends
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto p-3">
-                    <FriendsList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="requests" className="h-[calc(100%-3rem)] mt-0">
-                <Card className="h-full border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-4 w-4 text-primary" />
-                      Friend Requests
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto p-3">
-                    <FriendRequests />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="search" className="h-[calc(100%-3rem)] mt-0">
-                <Card className="h-full border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <UserPlus className="h-4 w-4 text-primary" />
-                      Add New Friends
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto p-3">
-                    <FriendsSearch />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Main Chat Area */}
-          <div className="lg:col-span-3 h-full">
-            {selectedFriend ? (
-              <ChatConversation 
-                friend={selectedFriend} 
-                onBack={() => setSelectedFriend(null)} 
-              />
-            ) : (
-              <Card className="h-full flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
-                <div className="text-center max-w-md">
-                  <MessageCircle className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
-                  <h2 className="text-lg font-semibold mb-2">Welcome to Messages</h2>
-                  <p className="text-muted-foreground mb-4 text-sm">
-                    Select a friend from your chat list to start messaging, or add new friends to expand your network!
-                  </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        const tabElements = document.querySelectorAll('[role="tab"]');
-                        const friendsTab = Array.from(tabElements).find(tab => tab.textContent?.includes('Friends'));
-                        (friendsTab as HTMLElement)?.click();
-                      }}
-                    >
-                      View Friends
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        const tabElements = document.querySelectorAll('[role="tab"]');
-                        const searchTab = Array.from(tabElements).find(tab => tab.querySelector('[data-testid="user-plus-icon"], .lucide-user-plus'));
-                        (searchTab as HTMLElement)?.click();
-                      }}
-                    >
-                      Add Friends
-                    </Button>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
+          {/* Messages Card */}
+          <MessagesPopup>
+            <Card className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-primary" />
+                    Messages
                   </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Chat with your {friends.length} friends
+                </p>
+                <div className="text-xs text-primary font-medium">
+                  Click to open messages
                 </div>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
+          </MessagesPopup>
+
+          {/* Friends Card */}
+          <MessagesPopup>
+            <Card className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-secondary/20 bg-gradient-to-br from-secondary/5 to-accent/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-secondary" />
+                    Friends
+                  </div>
+                  <span className="bg-secondary/20 text-secondary text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                    {friends.length}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Manage your friendships
+                </p>
+                <div className="text-xs text-secondary font-medium">
+                  Click to view friends
+                </div>
+              </CardContent>
+            </Card>
+          </MessagesPopup>
+
+          {/* Friend Requests Card */}
+          <MessagesPopup>
+            <Card className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-accent/20 bg-gradient-to-br from-accent/5 to-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-accent" />
+                    Requests
+                  </div>
+                  {friendRequestCount > 0 && (
+                    <span className="bg-orange-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {friendRequestCount}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {friendRequestCount > 0 
+                    ? `${friendRequestCount} pending request${friendRequestCount > 1 ? 's' : ''}` 
+                    : 'No pending requests'
+                  }
+                </p>
+                <div className="text-xs text-accent font-medium">
+                  Click to manage requests
+                </div>
+              </CardContent>
+            </Card>
+          </MessagesPopup>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+          <div className="flex gap-4">
+            <MessagesPopup>
+              <Button className="bg-gradient-to-r from-primary to-secondary text-primary-foreground">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Open Messages
+              </Button>
+            </MessagesPopup>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/")}
+              className="border-primary/20 hover:bg-primary/5"
+            >
+              Back to Questions
+            </Button>
           </div>
         </div>
       </div>
