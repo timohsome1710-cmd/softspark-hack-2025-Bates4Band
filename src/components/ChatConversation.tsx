@@ -71,72 +71,82 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
   useEffect(() => {
     if (!user || !friend) return;
 
-    const initializeChat = async () => {
-      try {
-        // 1) Find or create a direct chat room
-        const { data: existingRoom } = await supabase
-          .from("chat_rooms")
-          .select("id")
-          .eq("is_group", false)
-          .or(`and(user1_id.eq.${user.id},user2_id.eq.${friend.friend_id}),and(user1_id.eq.${friend.friend_id},user2_id.eq.${user.id})`)
-          .maybeSingle();
+        const initializeChat = async () => {
+          try {
+            // 1) Find or create a direct chat room
+            const { data: existingRoom } = await supabase
+              .from("chat_rooms")
+              .select("id")
+              .eq("is_group", false)
+              .or(`and(user1_id.eq.${user.id},user2_id.eq.${friend.friend_id}),and(user1_id.eq.${friend.friend_id},user2_id.eq.${user.id})`)
+              .maybeSingle();
 
-        let roomId = existingRoom?.id;
+            let roomId = existingRoom?.id;
 
-        if (!existingRoom) {
-          const { data: newRoom, error: createRoomError } = await supabase
-            .from("chat_rooms")
-            .insert([
-              {
-                user1_id: user.id,
-                user2_id: friend.friend_id,
-                is_group: false,
-              },
-            ])
-            .select("id")
-            .single();
+            if (!existingRoom) {
+              const { data: newRoom, error: createRoomError } = await supabase
+                .from("chat_rooms")
+                .insert([
+                  {
+                    user1_id: user.id,
+                    user2_id: friend.friend_id,
+                    is_group: false,
+                  },
+                ])
+                .select("id")
+                .single();
 
-          if (createRoomError) throw createRoomError;
-          roomId = newRoom.id;
-        }
+              if (createRoomError) throw createRoomError;
+              roomId = newRoom.id;
+            }
 
-        setChatRoomId(roomId!);
+            setChatRoomId(roomId!);
 
-        // 2) Ensure current user is a member (RLS for messages requires membership)
-        const { data: memberExists } = await supabase
-          .from("chat_room_members")
-          .select("id")
-          .eq("chat_room_id", roomId!)
-          .eq("user_id", user.id)
-          .maybeSingle();
+            // 2) Ensure current user is a member (RLS for messages requires membership)
+            const { data: memberExists } = await supabase
+              .from("chat_room_members")
+              .select("id")
+              .eq("chat_room_id", roomId!)
+              .eq("user_id", user.id)
+              .maybeSingle();
 
-        if (!memberExists) {
-          // Insert membership for the current user (friend will add theirs on first open)
-          const { error: memberInsertError } = await supabase
-            .from("chat_room_members")
-            .insert([{ chat_room_id: roomId!, user_id: user.id, is_admin: false }]);
-          if (memberInsertError) {
-            // Not fatal if duplicate or race condition; continue
-            console.warn("Membership insert warning:", memberInsertError);
+            if (!memberExists) {
+              // Insert membership for the current user (friend will add theirs on first open)
+              const { error: memberInsertError } = await supabase
+                .from("chat_room_members")
+                .insert([{ chat_room_id: roomId!, user_id: user.id, is_admin: false }]);
+              if (memberInsertError) {
+                // Not fatal if duplicate or race condition; continue
+                console.warn("Membership insert warning:", memberInsertError);
+              }
+            }
+
+            // 3) Load existing messages
+            const { data: messagesData, error: messagesError } = await supabase
+              .from("messages")
+              .select("*")
+              .eq("chat_room_id", roomId!)
+              .order("created_at", { ascending: true });
+
+            if (messagesError) throw messagesError;
+            setMessages(messagesData || []);
+
+            // 4) Mark messages as read for current user
+            if (messagesData && messagesData.length > 0) {
+              await supabase
+                .from("messages")
+                .update({ is_read: true })
+                .eq("chat_room_id", roomId!)
+                .neq("sender_id", user.id)
+                .eq("is_read", false);
+            }
+          } catch (error) {
+            console.error("Error initializing chat:", error);
+            toast({ title: "Error", description: "Failed to load chat", variant: "destructive" });
+          } finally {
+            setLoading(false);
           }
-        }
-
-        // 3) Load existing messages
-        const { data: messagesData, error: messagesError } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("chat_room_id", roomId!)
-          .order("created_at", { ascending: true });
-
-        if (messagesError) throw messagesError;
-        setMessages(messagesData || []);
-      } catch (error) {
-        console.error("Error initializing chat:", error);
-        toast({ title: "Error", description: "Failed to load chat", variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    };
+        };
 
     initializeChat();
   }, [user, friend]);
@@ -150,8 +160,17 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${chatRoomId}` },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+        async (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages((prev) => [...prev, newMessage]);
+          
+          // Mark new message as read if it's not from current user
+          if (newMessage.sender_id !== user.id) {
+            await supabase
+              .from("messages")
+              .update({ is_read: true })
+              .eq("id", newMessage.id);
+          }
         }
       )
       .on(

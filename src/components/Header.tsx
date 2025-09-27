@@ -52,6 +52,31 @@ const Header = () => {
     };
 
     loadUserData();
+
+    // Set up real-time listener for message updates to refresh unread count
+    const channel = supabase
+      .channel('message-updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        () => {
+          // Refresh unread count when messages are updated (marked as read)
+          loadUserData();
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        () => {
+          // Refresh unread count when new messages arrive
+          loadUserData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleSignOut = async () => {

@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/Header";
 import EmojiPicker from 'emoji-picker-react';
 
@@ -53,6 +54,7 @@ const Messages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   // Chat state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -271,6 +273,16 @@ const Messages = () => {
 
       if (messagesError) throw messagesError;
       setMessages(messagesData || []);
+
+      // Mark messages as read for current user
+      if (messagesData && messagesData.length > 0) {
+        await supabase
+          .from("messages")
+          .update({ is_read: true })
+          .eq("chat_room_id", roomId!)
+          .neq("sender_id", user.id)
+          .eq("is_read", false);
+      }
     } catch (error) {
       console.error("Error initializing chat:", error);
       toast({
@@ -328,15 +340,24 @@ const Messages = () => {
 
   // Real-time messages
   useEffect(() => {
-    if (!chatRoomId) return;
+    if (!chatRoomId || !user) return;
 
     const channel = supabase
       .channel(`room-${chatRoomId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${chatRoomId}` },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+        async (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages(prev => [...prev, newMessage]);
+          
+          // Mark new message as read if it's not from current user
+          if (newMessage.sender_id !== user.id) {
+            await supabase
+              .from("messages")
+              .update({ is_read: true })
+              .eq("id", newMessage.id);
+          }
         }
       )
       .subscribe();
@@ -344,7 +365,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatRoomId]);
+  }, [chatRoomId, user]);
 
   // Debounce search
   useEffect(() => {
@@ -379,7 +400,7 @@ const Messages = () => {
 
         <div className="flex h-[calc(100vh-12rem)] bg-white rounded-lg shadow-lg overflow-hidden border">
           {/* Left Panel */}
-          <div className="w-1/3 border-r bg-gray-50 flex flex-col">
+          <div className={`${isMobile ? (selectedFriend ? 'hidden' : 'w-full') : 'w-1/3'} border-r bg-gray-50 flex flex-col`}>
             {/* Header */}
             <div className="p-4 bg-primary text-primary-foreground">
               <div className="flex items-center justify-between mb-3">
