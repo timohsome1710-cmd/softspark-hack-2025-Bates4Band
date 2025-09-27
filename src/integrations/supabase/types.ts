@@ -344,6 +344,8 @@ export type Database = {
           content: string
           created_at: string
           difficulty: string
+          has_approved_answer: boolean | null
+          has_teacher_approved_answer: boolean | null
           id: string
           images: string[] | null
           latex_content: string | null
@@ -360,6 +362,8 @@ export type Database = {
           content: string
           created_at?: string
           difficulty: string
+          has_approved_answer?: boolean | null
+          has_teacher_approved_answer?: boolean | null
           id?: string
           images?: string[] | null
           latex_content?: string | null
@@ -376,6 +380,8 @@ export type Database = {
           content?: string
           created_at?: string
           difficulty?: string
+          has_approved_answer?: boolean | null
+          has_teacher_approved_answer?: boolean | null
           id?: string
           images?: string[] | null
           latex_content?: string | null
