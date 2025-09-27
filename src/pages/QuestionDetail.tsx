@@ -67,6 +67,7 @@ const QuestionDetail = () => {
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [question, setQuestion] = useState<any>(null);
   const [answers, setAnswers] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -259,6 +260,58 @@ const QuestionDetail = () => {
     }
   };
 
+  const handleApproveAnswer = async (answerId: string, approvalType: 'author' | 'teacher') => {
+    try {
+      const updateData = approvalType === 'author' 
+        ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
+        : { teacher_approved: true, teacher_approved_by: user?.id };
+
+      const { error } = await supabase
+        .from('answers')
+        .update(updateData)
+        .eq('id', answerId);
+
+      if (error) throw error;
+
+      // Refresh answers
+      await fetchAnswers();
+      
+      toast({
+        title: "Success",
+        description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully!`,
+      });
+    } catch (error) {
+      console.error('Error approving answer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve answer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAnswers = async () => {
+    if (!id) return;
+    try {
+      const { data: answers, error: answersError } = await supabase
+        .from("answers")
+        .select(`
+          *,
+          profiles!answers_author_id_fkey (
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq("question_id", id)
+        .order("created_at", { ascending: false });
+
+      if (answersError) throw answersError;
+      setAnswers(answers || []);
+    } catch (error) {
+      console.error('Error fetching answers:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -418,24 +471,56 @@ const QuestionDetail = () => {
                                {answer.profiles?.display_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                              </AvatarFallback>
                            </Avatar>
-                           <div className="flex-1">
-                             <div className="flex items-center gap-2 mb-2">
-                               <span className="font-medium">{answer.profiles?.display_name || 'Unknown User'}</span>
-                               <Badge variant="outline" className="text-xs">Lv. 1</Badge>
-                               <span className="text-xs text-muted-foreground">
-                                 {new Date(answer.created_at).toLocaleDateString()}
-                               </span>
-                               {answer.approved_by_author && (
-                                 <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                   <CheckCircle2 className="mr-1 h-3 w-3" />
-                                   Accepted
-                                 </Badge>
-                               )}
-                             </div>
-                             <p className="text-foreground whitespace-pre-line leading-relaxed">
-                               {answer.content}
-                             </p>
-                           </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-medium">{answer.profiles?.display_name || 'Unknown User'}</span>
+                                <Badge variant="outline" className="text-xs">Lv. 1</Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(answer.created_at).toLocaleDateString()}
+                                </span>
+                                {answer.approved_by_author && (
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                    Accepted by Author
+                                  </Badge>
+                                )}
+                                {answer.teacher_approved && (
+                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                    Teacher Approved
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-foreground whitespace-pre-line leading-relaxed">
+                                {answer.content}
+                              </p>
+                              
+                              {/* Approval buttons */}
+                              <div className="flex gap-2 mt-3">
+                                {user && question.author_id === user.id && !answer.approved_by_author && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApproveAnswer(answer.id, 'author')}
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                    Accept Answer
+                                  </Button>
+                                )}
+                                {user && userProfile?.role === 'teacher' && !answer.teacher_approved && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApproveAnswer(answer.id, 'teacher')}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                    Teacher Approve
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                          </div>
                        </CardContent>
                      </Card>

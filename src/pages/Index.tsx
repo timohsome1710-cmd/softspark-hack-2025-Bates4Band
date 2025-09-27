@@ -39,6 +39,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [teacherApprovedFilter, setTeacherApprovedFilter] = useState("all");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,10 +81,18 @@ const Index = () => {
             .eq("approved_by_author", true)
             .limit(1);
 
+          const { data: teacherApprovedAnswers } = await supabase
+            .from("answers")
+            .select("id")
+            .eq("question_id", question.id)
+            .eq("teacher_approved", true)
+            .limit(1);
+
           return {
             ...question,
             answer_count: count || 0,
             has_approved_answer: (approvedAnswers?.length || 0) > 0,
+            has_teacher_approved_answer: (teacherApprovedAnswers?.length || 0) > 0,
             author: question.profiles
           };
         }));
@@ -182,6 +191,14 @@ const Index = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              <select
+                value={teacherApprovedFilter}
+                onChange={(e) => setTeacherApprovedFilter(e.target.value)}
+                className="px-3 py-2 border border-input bg-background text-sm rounded-md"
+              >
+                <option value="all">All Questions</option>
+                <option value="teacher-approved">Teacher Approved</option>
+              </select>
               <Button variant="outline" size="icon">
                 <Filter className="h-4 w-4" />
               </Button>

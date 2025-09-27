@@ -22,6 +22,7 @@ interface Question {
   };
   answer_count?: number;
   has_approved_answer?: boolean;
+  has_teacher_approved_answer?: boolean;
 }
 
 interface QuestionCardProps {
@@ -86,6 +87,12 @@ const QuestionCard = ({ question }: QuestionCardProps) => {
                   <Badge variant="secondary" className="text-xs bg-level-gold/20 text-level-gold border-level-gold/30">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Solved
+                  </Badge>
+                )}
+                {question.has_teacher_approved_answer && (
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                    Teacher Approved
                   </Badge>
                 )}
               </div>
