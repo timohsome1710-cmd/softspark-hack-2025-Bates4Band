@@ -291,6 +291,8 @@ const QuestionDetail = () => {
   };
 
   const handleApproveAnswer = async (answerId: string, approvalType: 'author' | 'teacher') => {
+    console.log('Approving answer:', answerId, 'type:', approvalType);
+    
     // Only question author can approve answers (author type)
     if (approvalType === 'author' && user?.id !== question?.author_id) {
       toast({
@@ -303,6 +305,8 @@ const QuestionDetail = () => {
 
     // Check if answer is from question author (they can't approve their own answer)
     const answer = answers.find(a => a.id === answerId);
+    console.log('Found answer:', answer);
+    
     if (answer?.author_id === question?.author_id) {
       toast({
         title: "Cannot Approve",
@@ -317,32 +321,24 @@ const QuestionDetail = () => {
         ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
         : { teacher_approved: true, teacher_approved_by: user?.id };
 
+      console.log('Updating with data:', updateData);
+
       const { error } = await supabase
         .from('answers')
         .update(updateData)
         .eq('id', answerId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
+
+      console.log('Database update successful');
 
       // Award EXP to answer author when approved (only once)
       if (answer && !answer.approved_by_author) {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
-
-      // Update local state immediately for instant UI feedback
-      setAnswers(prevAnswers => 
-        prevAnswers.map(a => 
-          a.id === answerId 
-            ? { 
-                ...a, 
-                ...(approvalType === 'author' 
-                  ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
-                  : { teacher_approved: true, teacher_approved_by: user?.id }
-                )
-              }
-            : a
-        )
-      );
 
       // Refresh answers from database to ensure consistency
       await fetchAnswers();
@@ -364,6 +360,7 @@ const QuestionDetail = () => {
   const fetchAnswers = async () => {
     if (!id) return;
     try {
+      console.log('Fetching answers for question:', id);
       const { data: answers, error: answersError } = await supabase
         .from("answers")
         .select(`
@@ -377,6 +374,7 @@ const QuestionDetail = () => {
         .order("created_at", { ascending: false });
 
       if (answersError) throw answersError;
+      console.log('Fetched answers:', answers);
       setAnswers(answers || []);
     } catch (error) {
       console.error('Error fetching answers:', error);
