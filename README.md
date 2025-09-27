@@ -21,3 +21,5 @@ Team Member (Bates4band):
 Testing account:
 timopalsu@gmail.com (123456)
 timohsome@gmail.com (123456)
+
+Video Link: 
