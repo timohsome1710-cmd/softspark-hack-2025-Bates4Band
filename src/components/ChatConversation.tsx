@@ -308,7 +308,7 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
                           <div className="flex items-center justify-between mt-1">
                             <p className="text-[10px] opacity-70">
                               {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {message.updated_at && ' · edited'}
+                              {message.updated_at && new Date(message.updated_at).getTime() > new Date(message.created_at).getTime() + 1000 && ' · edited'}
                             </p>
                             {isOwnMessage && (
                               <button

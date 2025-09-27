@@ -12,7 +12,7 @@ import Header from "@/components/Header";
 import FriendsSearch from "@/components/FriendsSearch";
 import FriendsList from "@/components/FriendsList";
 import ChatConversation from "@/components/ChatConversation";
-import FriendsModal from "@/components/FriendsModal";
+import FriendRequests from "@/components/FriendRequests";
 
 interface Friend {
   friend_id: string;
@@ -109,20 +109,19 @@ const Messages = () => {
       </div>
 
       <div className="container mx-auto px-4 pb-8">
-        <div className="flex items-center justify-between mb-3">
-          <div />
-          <FriendsModal>
-            <Button size="sm">Add Friends</Button>
-          </FriendsModal>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
+          <p className="text-muted-foreground text-sm">Connect and chat with your friends</p>
         </div>
         <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-16rem)]">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <Tabs defaultValue="chats" className="w-full h-full">
-              <TabsList className="grid w-full grid-cols-3 mb-3">
-                <TabsTrigger value="chats" className="text-sm font-medium">Chats</TabsTrigger>
-                <TabsTrigger value="friends" className="text-sm font-medium">Friends</TabsTrigger>
-                <TabsTrigger value="search" className="text-sm font-medium">
+              <TabsList className="grid w-full grid-cols-4 mb-3">
+                <TabsTrigger value="chats" className="text-xs font-medium">Chats</TabsTrigger>
+                <TabsTrigger value="friends" className="text-xs font-medium">Friends</TabsTrigger>
+                <TabsTrigger value="requests" className="text-xs font-medium">Requests</TabsTrigger>
+                <TabsTrigger value="search" className="text-xs font-medium">
                   <UserPlus className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
@@ -195,6 +194,20 @@ const Messages = () => {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="requests" className="h-[calc(100%-3rem)] mt-0">
+                <Card className="h-full border">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-4 w-4 text-primary" />
+                      Friend Requests
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto p-3">
+                    <FriendRequests />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="search" className="h-[calc(100%-3rem)] mt-0">
                 <Card className="h-full border">
                   <CardHeader className="pb-3">
@@ -231,8 +244,9 @@ const Messages = () => {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        const friendsTab = document.querySelector('[data-state="inactive"][value="friends"]') as HTMLElement;
-                        if (friendsTab) friendsTab.click();
+                        const tabElements = document.querySelectorAll('[role="tab"]');
+                        const friendsTab = Array.from(tabElements).find(tab => tab.textContent?.includes('Friends'));
+                        (friendsTab as HTMLElement)?.click();
                       }}
                     >
                       View Friends
@@ -240,8 +254,9 @@ const Messages = () => {
                     <Button 
                       size="sm"
                       onClick={() => {
-                        const searchTab = document.querySelector('[data-state="inactive"][value="search"]') as HTMLElement;
-                        if (searchTab) searchTab.click();
+                        const tabElements = document.querySelectorAll('[role="tab"]');
+                        const searchTab = Array.from(tabElements).find(tab => tab.querySelector('[data-testid="user-plus-icon"], .lucide-user-plus'));
+                        (searchTab as HTMLElement)?.click();
                       }}
                     >
                       Add Friends
