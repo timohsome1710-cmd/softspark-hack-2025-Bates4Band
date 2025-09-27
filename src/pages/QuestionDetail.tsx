@@ -78,6 +78,21 @@ const QuestionDetail = () => {
       
       setLoading(true);
       try {
+        // Fetch user profile
+        if (user) {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+          } else {
+            setUserProfile(profile);
+          }
+        }
+
         // Fetch question
         const { data: question, error: questionError } = await supabase
           .from("questions")
@@ -122,7 +137,7 @@ const QuestionDetail = () => {
     };
 
     fetchQuestionAndAnswers();
-  }, [id]);
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -255,9 +270,12 @@ const QuestionDetail = () => {
       setAnswers(prev => [data, ...prev]);
       setAnswerText("");
       
+      // Award EXP for answering
+      await awardEXP(user.id, 'answer', question.difficulty);
+      
       toast({
         title: "Answer submitted! 🎉",
-        description: "Thank you for helping a fellow student!",
+        description: "Thank you for helping a fellow student! +50 EXP",
       });
     } catch (error) {
       console.error("Error submitting answer:", error);
@@ -284,12 +302,18 @@ const QuestionDetail = () => {
 
       if (error) throw error;
 
+      // Award EXP to answer author when approved
+      const answer = answers.find(a => a.id === answerId);
+      if (answer) {
+        await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
+      }
+
       // Refresh answers
       await fetchAnswers();
       
       toast({
         title: "Success",
-        description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully!`,
+        description: `Answer ${approvalType === 'author' ? 'accepted' : 'approved'} successfully! The answerer received bonus EXP!`,
       });
     } catch (error) {
       console.error('Error approving answer:', error);
@@ -321,6 +345,34 @@ const QuestionDetail = () => {
     } catch (error) {
       console.error('Error fetching answers:', error);
     }
+  };
+
+  // EXP Award System
+  const awardEXP = async (userId: string, action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {
+    try {
+      const expReward = getEXPReward(action, difficulty);
+      
+      const { error } = await supabase.rpc('award_user_exp', {
+        p_user_id: userId,
+        p_exp_amount: expReward
+      });
+
+      if (error) {
+        console.error('Error awarding EXP:', error);
+      }
+    } catch (error) {
+      console.error('Error in awardEXP:', error);
+    }
+  };
+
+  const getEXPReward = (action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {
+    const baseRewards = {
+      question: { easy: 25, medium: 50, hard: 75 },
+      answer: { easy: 30, medium: 50, hard: 70 },
+      approved_answer: { easy: 20, medium: 30, hard: 50 } // Bonus for getting approved
+    };
+    
+    return baseRewards[action][difficulty as keyof typeof baseRewards[typeof action]] || 50;
   };
 
   return (
