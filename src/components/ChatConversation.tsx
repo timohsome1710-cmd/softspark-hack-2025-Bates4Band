@@ -7,6 +7,8 @@ import { Send, ArrowLeft, Phone, Video, MoreVertical, MessageCircle } from "luci
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileChatComposer from "@/components/MobileChatComposer";
 
 interface Message {
   id: string;
@@ -30,6 +32,7 @@ interface ChatConversationProps {
 const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [chatRoomId, setChatRoomId] = useState<string | null>(null);
@@ -131,14 +134,19 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
             if (messagesError) throw messagesError;
             setMessages(messagesData || []);
 
-            // 4) Mark messages as read for current user
+            // 4) Mark messages as read by inserting read receipts
             if (messagesData && messagesData.length > 0) {
-              await supabase
-                .from("messages")
-                .update({ is_read: true })
-                .eq("chat_room_id", roomId!)
-                .neq("sender_id", user.id)
-                .eq("is_read", false);
+              const unreadMessages = messagesData.filter(msg => msg.sender_id !== user.id);
+              if (unreadMessages.length > 0) {
+                const receipts = unreadMessages.map(msg => ({
+                  message_id: msg.id,
+                  user_id: user.id
+                }));
+                
+                await supabase
+                  .from("message_read_receipts")
+                  .upsert(receipts, { onConflict: 'message_id,user_id' });
+              }
             }
           } catch (error) {
             console.error("Error initializing chat:", error);
@@ -167,9 +175,11 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
           // Mark new message as read if it's not from current user
           if (newMessage.sender_id !== user.id) {
             await supabase
-              .from("messages")
-              .update({ is_read: true })
-              .eq("id", newMessage.id);
+              .from("message_read_receipts")
+              .upsert({
+                message_id: newMessage.id,
+                user_id: user.id
+              }, { onConflict: 'message_id,user_id' });
           }
         }
       )
@@ -352,16 +362,27 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
         {/* Input */}
         <div className="p-4 border-t bg-background">
           <div className="flex gap-2 items-end">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={`Message ${friend.display_name}...`}
-              onKeyDown={handleKeyPress}
-              className="flex-1 rounded-lg border px-3 py-2 text-sm resize-none min-h-[2.5rem]"
-            />
-            <Button onClick={sendMessage} disabled={!newMessage.trim()} size="sm" className="rounded-lg h-10 w-10 flex-shrink-0">
-              <Send className="h-4 w-4" />
-            </Button>
+            {isMobile ? (
+              <MobileChatComposer
+                message={newMessage}
+                setMessage={setNewMessage}
+                onSend={sendMessage}
+                placeholder={`Message ${friend.display_name}...`}
+              />
+            ) : (
+              <>
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={`Message ${friend.display_name}...`}
+                  onKeyDown={handleKeyPress}
+                  className="flex-1 rounded-lg border px-3 py-2 text-sm resize-none min-h-[2.5rem]"
+                />
+                <Button onClick={sendMessage} disabled={!newMessage.trim()} size="sm" className="rounded-lg h-10 w-10 flex-shrink-0">
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </CardContent>

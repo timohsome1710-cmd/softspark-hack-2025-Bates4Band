@@ -274,14 +274,19 @@ const Messages = () => {
       if (messagesError) throw messagesError;
       setMessages(messagesData || []);
 
-      // Mark messages as read for current user
+      // Mark messages as read by creating read receipts
       if (messagesData && messagesData.length > 0) {
-        await supabase
-          .from("messages")
-          .update({ is_read: true })
-          .eq("chat_room_id", roomId!)
-          .neq("sender_id", user.id)
-          .eq("is_read", false);
+        const unreadMessages = messagesData.filter(msg => msg.sender_id !== user.id);
+        if (unreadMessages.length > 0) {
+          const receipts = unreadMessages.map(msg => ({
+            message_id: msg.id,
+            user_id: user.id
+          }));
+          
+          await supabase
+            .from("message_read_receipts")
+            .upsert(receipts, { onConflict: 'message_id,user_id' });
+        }
       }
     } catch (error) {
       console.error("Error initializing chat:", error);
@@ -354,9 +359,11 @@ const Messages = () => {
           // Mark new message as read if it's not from current user
           if (newMessage.sender_id !== user.id) {
             await supabase
-              .from("messages")
-              .update({ is_read: true })
-              .eq("id", newMessage.id);
+              .from("message_read_receipts")
+              .upsert({
+                message_id: newMessage.id,
+                user_id: user.id
+              }, { onConflict: 'message_id,user_id' });
           }
         }
       )

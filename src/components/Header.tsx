@@ -16,6 +16,21 @@ const Header = () => {
   const [profile, setProfile] = useState<any>(null);
   const [userStats, setUserStats] = useState<any>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [loadingCount, setLoadingCount] = useState(false);
+
+  const loadUnreadCount = async () => {
+    if (!user || loadingCount) return;
+    
+    setLoadingCount(true);
+    try {
+      const { data: count } = await supabase.rpc('get_unread_message_count');
+      setUnreadMessages(count || 0);
+    } catch (error) {
+      console.error("Error loading unread count:", error);
+    } finally {
+      setLoadingCount(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -37,39 +52,35 @@ const Header = () => {
 
         setProfile(profileData);
         setUserStats(statsData);
-
-        // Get unread message count
-        const { count } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .neq("sender_id", user.id)
-          .eq("is_read", false);
-
-        setUnreadMessages(count || 0);
       } catch (error) {
         console.error("Error loading user data:", error);
       }
     };
 
     loadUserData();
+    loadUnreadCount();
 
-    // Set up real-time listener for message updates to refresh unread count
+    // Set up real-time listener for message updates
     const channel = supabase
-      .channel('message-updates')
+      .channel('message-notifications')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages' },
-        () => {
-          // Refresh unread count when messages are updated (marked as read)
-          loadUserData();
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          // Only update count if message is not from current user
+          if (payload.new.sender_id !== user.id) {
+            loadUnreadCount();
+          }
         }
       )
       .on(
-        'postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => {
-          // Refresh unread count when new messages arrive
-          loadUserData();
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_read_receipts' },
+        (payload) => {
+          // Update count when user marks messages as read
+          if (payload.new.user_id === user.id) {
+            loadUnreadCount();
+          }
         }
       )
       .subscribe();
@@ -77,7 +88,7 @@ const Header = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, loadingCount]);
 
   const handleSignOut = async () => {
     await signOut();
