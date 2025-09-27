@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, MessageCircle, Award, Clock, CheckCircle2 } from "lucide-react";
+import { BookOpen, MessageCircle, Award, Clock, CheckCircle2, Video, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Question {
@@ -13,6 +13,9 @@ interface Question {
   difficulty: string;
   author_id: string;
   created_at: string;
+  media_urls?: string[];
+  media_types?: string[];
+  latex_content?: string;
   author?: {
     display_name: string;
     avatar_url?: string;
@@ -92,6 +95,40 @@ const QuestionCard = ({ question }: QuestionCardProps) => {
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                 {question.content}
               </p>
+              
+              {/* Media Preview */}
+              {question.media_urls && question.media_urls.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {question.media_urls.slice(0, 3).map((url, index) => (
+                    <div key={index} className="relative">
+                      {question.media_types?.[index] === 'image' ? (
+                        <img 
+                          src={url} 
+                          alt="Question media" 
+                          className="w-12 h-12 object-cover rounded border"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-muted rounded border flex items-center justify-center">
+                          <Video className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {question.media_urls.length > 3 && (
+                    <div className="w-12 h-12 bg-muted rounded border flex items-center justify-center text-xs">
+                      +{question.media_urls.length - 3}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* LaTeX Preview */}
+              {question.latex_content && (
+                <Badge variant="outline" className="mt-2 text-xs bg-secondary/20">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Mathematical Content
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>

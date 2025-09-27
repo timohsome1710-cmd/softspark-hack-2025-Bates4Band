@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Trophy, User, Bell, Plus, MessageSquare, LogOut } from "lucide-react";
-import wsLogo from "@/assets/ws-logo.png";
+import wsLogo from "@/assets/ws-logo-new.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";

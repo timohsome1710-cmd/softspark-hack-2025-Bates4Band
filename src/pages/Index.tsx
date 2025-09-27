@@ -21,6 +21,9 @@ interface Question {
   difficulty: string;
   author_id: string;
   created_at: string;
+  media_urls?: string[];
+  media_types?: string[];
+  latex_content?: string;
   author?: {
     display_name: string;
     avatar_url?: string;
@@ -134,7 +137,10 @@ const Index = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar - Categories and Difficulty */}
           <div className="lg:col-span-1 space-y-6">
-            <CategoryFilter />
+            <CategoryFilter 
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+            />
             <DifficultyFilter 
               selectedDifficulty={selectedDifficulty}
               onDifficultyChange={setSelectedDifficulty}

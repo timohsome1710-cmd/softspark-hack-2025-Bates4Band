@@ -11,7 +11,12 @@ interface CategoryCount {
   color: string;
 }
 
-const CategoryFilter = () => {
+interface CategoryFilterProps {
+  selectedCategory: string;
+  onCategoryChange: (category: string) => void;
+}
+
+const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryFilterProps) => {
   const [categoryCounts, setCategoryCounts] = useState<CategoryCount[]>([]);
   const [totalQuestions, setTotalQuestions] = useState(0);
 
@@ -95,7 +100,14 @@ const CategoryFilter = () => {
       <CardContent>
         <div className="space-y-3">
           {/* All Questions */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 text-white cursor-pointer hover:scale-[1.02] transition-all duration-200 shadow-lg">
+          <div 
+            className={`flex items-center justify-between p-4 rounded-xl cursor-pointer hover:scale-[1.02] transition-all duration-200 shadow-lg ${
+              selectedCategory === "all" 
+                ? "bg-gradient-to-r from-primary to-secondary text-primary-foreground" 
+                : "bg-gradient-to-r from-slate-700 to-slate-800 text-white"
+            }`}
+            onClick={() => onCategoryChange("all")}
+          >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                 <span className="text-lg">📚</span>
@@ -108,22 +120,37 @@ const CategoryFilter = () => {
           </div>
 
           {/* Category Items */}
-          {categoryCounts.map((category) => (
-            <div
-              key={category.category}
-              className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-muted cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:bg-muted/50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-lg">{category.icon}</span>
+          {categoryCounts.map((category) => {
+            const categoryValue = category.category.toLowerCase().includes('math') ? 'mathematics' : 
+                                 category.category.toLowerCase().includes('science') ? 'science' : 
+                                 category.category.toLowerCase().includes('social') ? 'social studies' : 
+                                 category.category.toLowerCase();
+            const isSelected = selectedCategory === categoryValue;
+            
+            return (
+              <div
+                key={category.category}
+                className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
+                  isSelected 
+                    ? "bg-primary/20 border-2 border-primary" 
+                    : "bg-muted/30 border border-muted hover:bg-muted/50"
+                }`}
+                onClick={() => onCategoryChange(categoryValue)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <span className="text-lg">{category.icon}</span>
+                  </div>
+                  <span className="font-medium text-foreground">{category.category}</span>
                 </div>
-                <span className="font-medium text-foreground">{category.category}</span>
+                <Badge className={`font-bold px-3 py-1 rounded-full ${
+                  isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-primary"
+                }`}>
+                  {category.count}
+                </Badge>
               </div>
-              <Badge className="bg-secondary text-primary font-bold px-3 py-1 rounded-full">
-                {category.count}
-              </Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

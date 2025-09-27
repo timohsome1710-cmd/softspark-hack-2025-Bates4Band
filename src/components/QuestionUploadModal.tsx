@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Upload, Image, Video, FileText, X, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import MediaUpload from "./MediaUpload";
+
 interface QuestionUploadModalProps {
   trigger?: React.ReactNode;
 }
@@ -23,7 +25,9 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
     category: "",
     difficulty: "",
   });
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+  const [latexContent, setLatexContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = [
@@ -57,8 +61,10 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Here you would save to Supabase with media and LaTeX
+      console.log("Saving question with media:", mediaFiles, "and LaTeX:", latexContent);
+      
       toast({
         title: "Question Posted! 🎉",
         description: `Your question is now live and students can start answering to help you earn ${expectedExp} EXP!`,
@@ -66,23 +72,21 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
       
       // Reset form
       setFormData({ title: "", content: "", category: "", difficulty: "" });
-      setAttachments([]);
+      setMediaFiles([]);
+      setMediaTypes([]);
+      setLatexContent("");
       setOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to post question. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
-  const addAttachment = (type: string) => {
-    setAttachments([...attachments, type]);
-    toast({
-      title: "Feature Coming Soon!",
-      description: `${type} upload will be available soon.`,
-    });
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments(attachments.filter((_, i) => i !== index));
-  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -203,56 +207,18 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
             </p>
           </div>
 
-          {/* Attachments */}
+          {/* Media Upload */}
           <div className="space-y-3">
-            <Label>Attachments (Optional)</Label>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addAttachment("Image")}
-              >
-                <Image className="h-4 w-4 mr-2" />
-                Add Image
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addAttachment("Video")}
-              >
-                <Video className="h-4 w-4 mr-2" />
-                Add Video
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addAttachment("Notes")}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Add Notes
-              </Button>
-            </div>
-            
-            {attachments.length > 0 && (
-              <div className="space-y-2">
-                {attachments.map((attachment, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                    <span className="text-sm">{attachment} attachment</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeAttachment(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <MediaUpload
+              onMediaChange={(files, types) => {
+                setMediaFiles(files);
+                setMediaTypes(types);
+              }}
+              onLatexChange={setLatexContent}
+              initialFiles={mediaFiles}
+              initialTypes={mediaTypes}
+              initialLatex={latexContent}
+            />
           </div>
 
           {/* Submit Button */}
