@@ -11,7 +11,7 @@ export const useQuestionSubmit = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getEXPReward = (difficulty: string) => {
-    const rewards = { easy: 25, medium: 50, hard: 75 };
+    const rewards = { easy: 50, medium: 100, hard: 150 };
     return rewards[difficulty as keyof typeof rewards] || 50;
   };
 

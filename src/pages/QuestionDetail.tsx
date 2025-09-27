@@ -458,9 +458,9 @@ const QuestionDetail = () => {
 
   const getEXPReward = (action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {
     const baseRewards = {
-      question: { easy: 25, medium: 50, hard: 75 },
-      answer: { easy: 30, medium: 50, hard: 70 },
-      approved_answer: { easy: 50, medium: 100, hard: 150 } // Updated to match difficulty-based rewards
+      question: { easy: 50, medium: 100, hard: 150 },
+      answer: { easy: 50, medium: 75, hard: 100 },
+      approved_answer: { easy: 100, medium: 150, hard: 200 }
     };
     
     return baseRewards[action][difficulty as keyof typeof baseRewards[typeof action]] || 50;

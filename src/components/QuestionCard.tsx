@@ -50,10 +50,10 @@ const QuestionCard = ({ question }: QuestionCardProps) => {
 
   const getExpPoints = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
-      case "easy": return 50;
-      case "medium": return 100;
-      case "hard": return 150;
-      default: return 50;
+      case "easy": return 100;
+      case "medium": return 150;
+      case "hard": return 200;
+      default: return 100;
     }
   };
 
