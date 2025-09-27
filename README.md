@@ -4,22 +4,21 @@ Project URL: https://uysd-warungsoal.lovable.app/
 
 This project is built with cutting-edge web technologies:
 
-Vite
-TypeScript
-React
-shadcn-ui
-Tailwind CSS
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
 Team Members (Bates4Band):
-Timotius Hutabarat
-Gerrard Simanungkalit
-Israel Sinurat
-Joel Brian N.
+- Timotius Hutabarat
+- Gerrard Simanungkalit
+- Israel Sinurat
+- Joel Brian N.
 
 Testing Accounts:
-
-timopalsu@gmail.com (123456)
-timohsome@gmail.com (123456)
+- timopalsu@gmail.com (123456)
+- timohsome@gmail.com (123456)
 
 # Meaning of “Warung Soal”
 The term warung
@@ -31,11 +30,11 @@ So, “Warung Soal” can be translated as “Question Stall” or “Problem Hu
 Vision for USYD Online Learning Hub
 Through Warung Soal, our hope is to create a collaborative online learning hub for University of Sydney students, especially those in the Fellowship program. We want this platform to be:
 
-A peer-to-peer help center where students can support each other.
+- A peer-to-peer help center where students can support each other.
 
-A resource-sharing environment to reduce barriers in accessing learning materials.
+- A resource-sharing environment to reduce barriers in accessing learning materials.
 
-A space to practice problem-solving and critical thinking together, much like gathering at a warung in real life.
+- A space to practice problem-solving and critical thinking together, much like gathering at a warung in real life.
 
 # Motivation and Challenges
 We chose to use the term warung
@@ -44,10 +43,10 @@ We chose to use the term warung
 
 # The main problems we’re tackling:
 
-Students often feel isolated in digital platforms and need a cultural-based entry point.
+- Students often feel isolated in digital platforms and need a cultural-based entry point.
 
-Existing tools feel formal or transactional, while learning is often social and contextual.
+- Existing tools feel formal or transactional, while learning is often social and contextual.
 
-By borrowing from local Indonesian concepts, we combine cultural familiarity with global accessibility.
+- By borrowing from local Indonesian concepts, we combine cultural familiarity with global accessibility.
 
 In short, Warung Soal is not just about practicing questions; it’s about building a supportive academic community where every student belongs.
