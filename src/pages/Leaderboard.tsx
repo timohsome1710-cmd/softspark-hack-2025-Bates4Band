@@ -113,9 +113,9 @@ const Leaderboard = () => {
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1: return <Crown className="h-6 w-6 text-yellow-500" />;
-      case 2: return <Medal className="h-6 w-6 text-gray-400" />;
-      case 3: return <Award className="h-6 w-6 text-orange-500" />;
+      case 1: return <Crown className="h-5 w-5 text-yellow-500" />;
+      case 2: return <span className="text-lg font-bold text-gray-400">2</span>;
+      case 3: return <span className="text-lg font-bold text-orange-500">3</span>;
       default: return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
     }
   };
@@ -262,20 +262,20 @@ const Leaderboard = () => {
                         No leaderboard data available
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {leaderboardData.map((entry) => (
                           <div
                             key={entry.user_id}
-                            className={`flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors ${
-                              entry.user_id === user.id ? 'ring-2 ring-primary' : ''
+                            className={`flex items-center justify-between p-3 rounded-lg border hover:bg-accent/30 transition-colors ${
+                              entry.user_id === user.id ? 'ring-2 ring-primary bg-primary/5' : 'bg-card'
                             }`}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center w-10">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center w-8">
                                 {getRankIcon(entry.rank)}
                               </div>
                               
-                              <Avatar className="h-12 w-12">
+                              <Avatar className="h-10 w-10">
                                 <AvatarImage src={entry.avatar_url} alt={entry.display_name} />
                                 <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold">
                                   {getInitials(entry.display_name)}
@@ -284,12 +284,12 @@ const Leaderboard = () => {
 
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-bold text-lg">{entry.display_name}</span>
+                                  <span className="font-semibold">{entry.display_name}</span>
                                   {entry.user_id === user.id && (
                                     <Badge variant="secondary" className="text-xs">You</Badge>
                                   )}
-                                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                                    Level {entry.level}
+                                  <Badge variant="outline" className="text-xs">
+                                    Lv. {entry.level}
                                   </Badge>
                                   <Badge 
                                     variant="outline" 
@@ -298,16 +298,15 @@ const Leaderboard = () => {
                                     {entry.trophy_rank}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                  <span>🏅 {entry.questions_answered} Answers</span>
-                                  <span>⚡ {entry.total_exp} Total EXP</span>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {entry.questions_answered} answers • {entry.total_exp} total EXP
                                 </div>
                               </div>
                             </div>
 
                             <div className="text-right">
-                              <div className="text-2xl font-bold text-secondary">{entry.seasonal_exp}</div>
-                              <div className="text-sm text-muted-foreground">Season EXP</div>
+                              <div className="text-lg font-bold text-secondary">{entry.seasonal_exp}</div>
+                              <div className="text-xs text-muted-foreground">Season EXP</div>
                             </div>
                           </div>
                         ))}

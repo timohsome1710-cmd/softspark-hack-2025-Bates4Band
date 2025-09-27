@@ -122,10 +122,10 @@ const SimplifiedLeaderboard = () => {
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-300" />;
-    if (rank === 2) return <span className="text-lg">🥈</span>;
-    if (rank === 3) return <span className="text-lg">🥉</span>;
-    return <span className="font-bold text-muted-foreground">#{rank}</span>;
+    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
+    if (rank === 2) return <span className="text-sm">🥈</span>;
+    if (rank === 3) return <span className="text-sm">🥉</span>;
+    return <span className="text-xs font-bold text-muted-foreground">#{rank}</span>;
   };
 
   const getInitials = (name: string) => {
@@ -170,35 +170,36 @@ const SimplifiedLeaderboard = () => {
           <Progress value={seasonProgress} className="h-1" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 p-4">
         {topPlayers.length > 0 ? topPlayers.map((entry, index) => {
           const rank = index + 1;
           return (
             <div
               key={`${entry.display_name}-${rank}`}
-              className="flex items-center gap-2 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/30 transition-colors"
             >
-              <div className="w-6 h-6 flex items-center justify-center text-xs font-bold">
-                {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank}
+              <div className="w-5 h-5 flex items-center justify-center">
+                {getRankIcon(rank)}
               </div>
               
-              <Avatar className="h-6 w-6">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={entry.avatar_url || ""} alt={entry.display_name} />
-                <AvatarFallback className="text-xs">
+                <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary/10 to-secondary/10">
                   {getInitials(entry.display_name)}
                 </AvatarFallback>
               </Avatar>
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium truncate">{entry.display_name}</div>
-                  <div className="text-xs font-bold">{entry.seasonal_exp}</div>
+                  <div className="text-sm font-semibold truncate">{entry.display_name}</div>
+                  <div className="text-sm font-bold text-secondary">{entry.seasonal_exp}</div>
                 </div>
+                <div className="text-xs text-muted-foreground">Level {entry.level}</div>
               </div>
             </div>
           );
         }) : (
-          <div className="text-center py-4 text-sm text-muted-foreground">
+          <div className="text-center py-6 text-sm text-muted-foreground">
             No data yet
           </div>
         )}
@@ -206,7 +207,7 @@ const SimplifiedLeaderboard = () => {
         <Button 
           variant="outline" 
           size="sm"
-          className="w-full mt-3 text-xs text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+          className="w-full mt-4 text-xs text-foreground border-border hover:bg-accent hover:text-accent-foreground"
           onClick={() => navigate("/leaderboard")}
         >
           View Full Leaderboard
