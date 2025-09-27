@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// local helpers for editing
 interface Message {
   id: string;
   content: string;
@@ -16,7 +15,6 @@ interface Message {
   created_at: string;
   updated_at?: string;
 }
-
 
 interface Friend {
   friend_id: string;
@@ -67,11 +65,15 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
   };
 
   useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
     if (!user || !friend) return;
 
     const initializeChat = async () => {
       try {
-        // Check if a direct chat already exists
+        // 1) Find or create a direct chat room
         const { data: existingRoom } = await supabase
           .from("chat_rooms")
           .select("id")
@@ -82,40 +84,55 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
         let roomId = existingRoom?.id;
 
         if (!existingRoom) {
-          // Create new direct chat
-          const { data: newRoom, error } = await supabase
+          const { data: newRoom, error: createRoomError } = await supabase
             .from("chat_rooms")
-            .insert([{
-              user1_id: user.id,
-              user2_id: friend.friend_id,
-              is_group: false
-            }])
+            .insert([
+              {
+                user1_id: user.id,
+                user2_id: friend.friend_id,
+                is_group: false,
+              },
+            ])
             .select("id")
             .single();
 
-          if (error) throw error;
+          if (createRoomError) throw createRoomError;
           roomId = newRoom.id;
         }
 
-        setChatRoomId(roomId);
+        setChatRoomId(roomId!);
 
-        // Load messages
+        // 2) Ensure current user is a member (RLS for messages requires membership)
+        const { data: memberExists } = await supabase
+          .from("chat_room_members")
+          .select("id")
+          .eq("chat_room_id", roomId!)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!memberExists) {
+          // Insert membership for the current user (friend will add theirs on first open)
+          const { error: memberInsertError } = await supabase
+            .from("chat_room_members")
+            .insert([{ chat_room_id: roomId!, user_id: user.id, is_admin: false }]);
+          if (memberInsertError) {
+            // Not fatal if duplicate or race condition; continue
+            console.warn("Membership insert warning:", memberInsertError);
+          }
+        }
+
+        // 3) Load existing messages
         const { data: messagesData, error: messagesError } = await supabase
           .from("messages")
           .select("*")
-          .eq("chat_room_id", roomId)
+          .eq("chat_room_id", roomId!)
           .order("created_at", { ascending: true });
 
         if (messagesError) throw messagesError;
         setMessages(messagesData || []);
-
       } catch (error) {
         console.error("Error initializing chat:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load chat",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to load chat", variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -127,17 +144,23 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
   useEffect(() => {
     if (!chatRoomId) return;
 
-    // Set up real-time subscription
+    // Real-time: new messages and edits
     const channel = supabase
       .channel(`room-${chatRoomId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_room_id=eq.${chatRoomId}`
-      }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message]);
-      })
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${chatRoomId}` },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new as Message]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${chatRoomId}` },
+        (payload) => {
+          setMessages((prev) => prev.map((m) => (m.id === (payload.new as any).id ? (payload.new as Message) : m)));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -149,23 +172,29 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
     if (!chatRoomId || !user || !newMessage.trim()) return;
 
     try {
-      const { error } = await supabase
-        .from("messages")
-        .insert({
-          chat_room_id: chatRoomId,
-          sender_id: user.id,
-          content: newMessage.trim(),
-        });
+      // Double-check membership before sending
+      const { data: memberExists } = await supabase
+        .from("chat_room_members")
+        .select("id")
+        .eq("chat_room_id", chatRoomId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!memberExists) {
+        await supabase.from("chat_room_members").insert([{ chat_room_id: chatRoomId, user_id: user.id }]);
+      }
+
+      const { error } = await supabase.from("messages").insert({
+        chat_room_id: chatRoomId,
+        sender_id: user.id,
+        content: newMessage.trim(),
+      });
 
       if (error) throw error;
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
     }
   };
 
@@ -222,7 +251,7 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
         </div>
       </CardHeader>
 
-      {/* Input */}
+      {/* Messages */}
       <CardContent className="flex-1 flex flex-col p-0">
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/10">
           {messages.length === 0 ? (
@@ -269,8 +298,8 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
                             className="text-sm"
                           />
                           <div className="flex gap-2 justify-end">
-                            <Button size="xs" variant="outline" onClick={() => cancelEdit()}>Cancel</Button>
-                            <Button size="xs" onClick={() => saveEdit(message.id)}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={() => cancelEdit()}>Cancel</Button>
+                            <Button size="sm" onClick={() => saveEdit(message.id)}>Save</Button>
                           </div>
                         </div>
                       ) : (

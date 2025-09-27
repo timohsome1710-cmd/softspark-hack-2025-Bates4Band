@@ -123,8 +123,8 @@ const SimplifiedLeaderboard = () => {
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
-    if (rank === 2) return <span className="text-sm">🥈</span>;
-    if (rank === 3) return <span className="text-sm">🥉</span>;
+    if (rank === 2) return <span className="text-sm font-bold text-gray-400">2</span>;
+    if (rank === 3) return <span className="text-sm font-bold text-orange-500">3</span>;
     return <span className="text-xs font-bold text-muted-foreground">#{rank}</span>;
   };
 
