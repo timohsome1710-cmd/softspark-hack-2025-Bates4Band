@@ -12,6 +12,7 @@ import Header from "@/components/Header";
 import FriendsSearch from "@/components/FriendsSearch";
 import FriendsList from "@/components/FriendsList";
 import ChatConversation from "@/components/ChatConversation";
+import FriendsModal from "@/components/FriendsModal";
 
 interface Friend {
   friend_id: string;
@@ -108,6 +109,12 @@ const Messages = () => {
       </div>
 
       <div className="container mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div />
+          <FriendsModal>
+            <Button size="sm">Add Friends</Button>
+          </FriendsModal>
+        </div>
         <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-16rem)]">
           {/* Sidebar */}
           <div className="lg:col-span-1">

@@ -8,12 +8,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// local helpers for editing
 interface Message {
   id: string;
   content: string;
   sender_id: string;
   created_at: string;
+  updated_at?: string;
 }
+
 
 interface Friend {
   friend_id: string;
@@ -33,15 +36,35 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [chatRoomId, setChatRoomId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const startEdit = (message: Message) => {
+    setEditingId(message.id);
+    setEditingText(message.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText("");
+  };
+
+  const saveEdit = async (messageId: string) => {
+    if (!editingText.trim()) return cancelEdit();
+    try {
+      await updateMessageContent(messageId, editingText.trim());
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: editingText.trim(), updated_at: new Date().toISOString() } : m)));
+      cancelEdit();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "Failed to edit message", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (!user || !friend) return;
@@ -199,7 +222,7 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
         </div>
       </CardHeader>
 
-      {/* Messages */}
+      {/* Input */}
       <CardContent className="flex-1 flex flex-col p-0">
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/10">
           {messages.length === 0 ? (
@@ -211,8 +234,11 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
           ) : (
             messages.map((message, index) => {
               const isOwnMessage = message.sender_id === user?.id;
-              const showTime = index === 0 || 
+              const showTime =
+                index === 0 ||
                 new Date(message.created_at).getTime() - new Date(messages[index - 1].created_at).getTime() > 300000;
+
+              const isEditing = editingId === message.id;
 
               return (
                 <div key={message.id}>
@@ -223,16 +249,49 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
                   )}
                   <div className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[70%] px-3 py-2 rounded-xl shadow-sm ${
+                      className={`group max-w-[70%] px-3 py-2 rounded-xl shadow-sm ${
                         isOwnMessage
                           ? "bg-primary text-primary-foreground rounded-br-sm ml-8"
                           : "bg-white border border-border rounded-bl-sm mr-8"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1 text-right">
-                        {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                saveEdit(message.id);
+                              }
+                            }}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button size="xs" variant="outline" onClick={() => cancelEdit()}>Cancel</Button>
+                            <Button size="xs" onClick={() => saveEdit(message.id)}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-[10px] opacity-70">
+                              {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {message.updated_at && ' · edited'}
+                            </p>
+                            {isOwnMessage && (
+                              <button
+                                className="opacity-0 group-hover:opacity-100 text-[10px] underline-offset-2 hover:underline"
+                                onClick={() => startEdit(message)}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -252,12 +311,7 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
               onKeyDown={handleKeyPress}
               className="flex-1 rounded-lg border px-3 py-2 text-sm resize-none min-h-[2.5rem]"
             />
-            <Button 
-              onClick={sendMessage} 
-              disabled={!newMessage.trim()}
-              size="sm"
-              className="rounded-lg h-10 w-10 flex-shrink-0"
-            >
+            <Button onClick={sendMessage} disabled={!newMessage.trim()} size="sm" className="rounded-lg h-10 w-10 flex-shrink-0">
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -266,5 +320,14 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
     </Card>
   );
 };
+
+// Edit helpers
+async function updateMessageContent(messageId: string, newContent: string) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ content: newContent })
+    .eq('id', messageId);
+  if (error) throw error;
+}
 
 export default ChatConversation;
