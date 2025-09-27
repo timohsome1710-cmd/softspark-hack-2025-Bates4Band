@@ -77,15 +77,23 @@ const Index = () => {
 
           const { data: approvedAnswers } = await supabase
             .from("answers")
-            .select("id, approved_by_author, teacher_approved")
+            .select("id")
             .eq("question_id", question.id)
-            .or("approved_by_author.eq.true,teacher_approved.eq.true");
+            .eq("approved_by_author", true)
+            .limit(1);
+
+          const { data: teacherApprovedAnswers } = await supabase
+            .from("answers")
+            .select("id")
+            .eq("question_id", question.id)
+            .eq("teacher_approved", true)
+            .limit(1);
 
           return {
             ...question,
             answer_count: count || 0,
-            has_approved_answer: (approvedAnswers?.some(a => a.approved_by_author) || false),
-            has_teacher_approved_answer: (approvedAnswers?.some(a => a.teacher_approved) || false),
+            has_approved_answer: (approvedAnswers?.length || 0) > 0,
+            has_teacher_approved_answer: (teacherApprovedAnswers?.length || 0) > 0,
             author: question.profiles
           };
         }));
@@ -105,29 +113,20 @@ const Index = () => {
 
     loadQuestions();
 
-    // Set up real-time subscription for questions and answers
+    // Set up real-time subscription for new questions and answer updates
     const channel = supabase
-      .channel('questions-answers-changes')
+      .channel('questions-changes')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'questions' },
-        () => {
-          console.log('Question inserted, reloading...');
-          loadQuestions();
-        }
+        () => loadQuestions()
       )
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'answers' },
-        (payload) => {
-          console.log('Answer updated, reloading questions...', payload);
-          loadQuestions();
-        }
+        () => loadQuestions()
       )
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'answers' },
-        (payload) => {
-          console.log('Answer inserted, reloading questions...', payload);
-          loadQuestions();
-        }
+        () => loadQuestions()
       )
       .subscribe();
 

@@ -112,13 +112,23 @@ const QuestionDetail = () => {
           setError("Question not found");
           return;
         }
-        // Increment question view count
-        await supabase.rpc('increment_question_view', { question_id: id });
-        
         setQuestion(question);
 
-        // Fetch answers with real-time updates
-        await fetchAnswers();
+        // Fetch answers
+        const { data: answers, error: answersError } = await supabase
+          .from("answers")
+          .select(`
+            *,
+            profiles!answers_author_id_fkey (
+              display_name,
+              avatar_url
+            )
+          `)
+          .eq("question_id", id)
+          .order("created_at", { ascending: false });
+
+        if (answersError) throw answersError;
+        setAnswers(answers || []);
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Question not found");
@@ -128,29 +138,6 @@ const QuestionDetail = () => {
     };
 
     fetchQuestionAndAnswers();
-
-    // Set up real-time subscription for answer changes
-    const channel = supabase
-      .channel('question-answers')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
-        (payload) => {
-          console.log('Answer updated in real-time:', payload);
-          fetchAnswers();
-        }
-      )
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'answers', filter: `question_id=eq.${id}` },
-        (payload) => {
-          console.log('Answer inserted in real-time:', payload);
-          fetchAnswers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [id, user]);
 
   if (loading) {
@@ -357,7 +344,7 @@ const QuestionDetail = () => {
         ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
         : { teacher_approved: true, teacher_approved_by: user?.id };
 
-      console.log('Updating answer with data:', updateData);
+      console.log('Updating with data:', updateData);
 
       const { error } = await supabase
         .from('answers')
@@ -369,7 +356,7 @@ const QuestionDetail = () => {
         throw error;
       }
 
-      console.log('Database update successful - answer approved');
+      console.log('Database update successful');
 
       // Award EXP to answer author when approved (only once)
       if (answer && !answer.approved_by_author && approvalType === 'author') {
@@ -378,7 +365,7 @@ const QuestionDetail = () => {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
-      // Update the local state immediately to show the change
+      // Update the local state first to prevent UI flickering
       setAnswers(prevAnswers => 
         prevAnswers.map(a => 
           a.id === answerId ? { ...a, ...updateData } : a
@@ -399,9 +386,9 @@ const QuestionDetail = () => {
     }
   };
 
-  // Helper functions to check if answers are already approved - recalculate each time
-  const hasAuthorApprovedAnswer = answers.some(a => a.approved_by_author === true);
-  const hasTeacherApprovedAnswer = answers.some(a => a.teacher_approved === true);
+  // Helper functions to check if answers are already approved
+  const hasAuthorApprovedAnswer = answers.some(a => a.approved_by_author);
+  const hasTeacherApprovedAnswer = answers.some(a => a.teacher_approved);
 
   const fetchAnswers = async () => {
     if (!id) return;
@@ -420,11 +407,7 @@ const QuestionDetail = () => {
         .order("created_at", { ascending: false });
 
       if (answersError) throw answersError;
-      console.log('Fetched answers with approval status:', answers?.map(a => ({
-        id: a.id,
-        approved_by_author: a.approved_by_author,
-        teacher_approved: a.teacher_approved
-      })));
+      console.log('Fetched answers:', answers);
       setAnswers(answers || []);
     } catch (error) {
       console.error('Error fetching answers:', error);
