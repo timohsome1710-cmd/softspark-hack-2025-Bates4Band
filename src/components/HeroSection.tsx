@@ -91,7 +91,7 @@ const HeroSection = () => {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-2 border-primary-foreground bg-background/95 backdrop-blur-sm text-primary-foreground hover:bg-primary-foreground hover:text-primary px-8 py-3 text-lg font-semibold"
+                className="border-2 border-white bg-white text-primary hover:bg-white/90 hover:text-primary/90 px-8 py-3 text-lg font-semibold"
                 onClick={scrollToLeaderboard}
               >
                 <Trophy className="mr-2 h-5 w-5" />
