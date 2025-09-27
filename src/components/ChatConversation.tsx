@@ -103,17 +103,27 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
         // Mark messages as read using read receipts
         if (messagesData && messagesData.length > 0) {
           const messagesToMarkRead = messagesData.filter(msg => msg.sender_id !== user.id);
+          console.log(`Found ${messagesToMarkRead.length} messages to mark as read`);
           
-          for (const message of messagesToMarkRead) {
+          if (messagesToMarkRead.length > 0) {
             try {
-              await supabase
+              const readReceipts = messagesToMarkRead.map(msg => ({
+                message_id: msg.id,
+                user_id: user.id
+              }));
+              
+              console.log('Creating read receipts:', readReceipts);
+              const { error: readError } = await supabase
                 .from("message_read_receipts")
-                .upsert({
-                  message_id: message.id,
-                  user_id: user.id
-                });
+                .upsert(readReceipts, { onConflict: 'message_id,user_id' });
+                
+              if (readError) {
+                console.error("Error creating read receipts:", readError);
+              } else {
+                console.log("Successfully created read receipts");
+              }
             } catch (error) {
-              console.error("Error marking message as read:", error);
+              console.error("Error marking messages as read:", error);
             }
           }
         }
@@ -141,13 +151,20 @@ const ChatConversation = ({ friend, onBack }: ChatConversationProps) => {
           setMessages((prev) => [...prev, newMessage]);
           
           if (newMessage.sender_id !== user.id) {
+            console.log("Marking new message as read:", newMessage.id);
             try {
-              await supabase
+              const { error: readError } = await supabase
                 .from("message_read_receipts")
                 .upsert({
                   message_id: newMessage.id,
                   user_id: user.id
-                });
+                }, { onConflict: 'message_id,user_id' });
+                
+              if (readError) {
+                console.error("Error marking new message as read:", readError);
+              } else {
+                console.log("Successfully marked new message as read");
+              }
             } catch (error) {
               console.error("Error marking new message as read:", error);
             }

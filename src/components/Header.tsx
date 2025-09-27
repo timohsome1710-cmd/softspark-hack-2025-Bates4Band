@@ -18,13 +18,29 @@ const Header = () => {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [loadingCount, setLoadingCount] = useState(false);
 
+  // Force refresh unread count on component mount
+  useEffect(() => {
+    if (user) {
+      console.log("Force refreshing unread count on mount");
+      setUnreadMessages(0); // Clear cached value
+      setTimeout(() => loadUnreadCount(), 100);
+    }
+  }, [user?.id]);
+
   const loadUnreadCount = async () => {
     if (!user || loadingCount) return;
     
     setLoadingCount(true);
     try {
-      const { data: count } = await supabase.rpc('get_unread_message_count');
-      setUnreadMessages(count || 0);
+      console.log("Loading unread message count for user:", user.id);
+      const { data: count, error } = await supabase.rpc('get_unread_message_count');
+      
+      if (error) {
+        console.error("Error loading unread count:", error);
+      } else {
+        console.log("Unread message count:", count);
+        setUnreadMessages(count || 0);
+      }
     } catch (error) {
       console.error("Error loading unread count:", error);
     } finally {
@@ -67,9 +83,10 @@ const Header = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
+          console.log('New message detected:', payload.new);
           // Only update count if message is not from current user
           if (payload.new.sender_id !== user.id) {
-            loadUnreadCount();
+            setTimeout(() => loadUnreadCount(), 500); // Small delay to ensure processing
           }
         }
       )
@@ -77,6 +94,7 @@ const Header = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'message_read_receipts' },
         (payload) => {
+          console.log('New read receipt detected:', payload.new);
           // Update count when user marks messages as read
           if (payload.new.user_id === user.id) {
             loadUnreadCount();
