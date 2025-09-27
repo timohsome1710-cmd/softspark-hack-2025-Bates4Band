@@ -359,11 +359,20 @@ const QuestionDetail = () => {
       console.log('Database update successful');
 
       // Award EXP to answer author when approved (only once)
-      if (answer && !answer.approved_by_author) {
+      if (answer && !answer.approved_by_author && approvalType === 'author') {
+        await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
+      } else if (answer && !answer.teacher_approved && approvalType === 'teacher') {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
-      // Refresh answers from database to ensure consistency
+      // Update the local state immediately for better UX
+      setAnswers(prevAnswers => 
+        prevAnswers.map(a => 
+          a.id === answerId ? { ...a, ...updateData } : a
+        )
+      );
+      
+      // Also refresh from database to ensure consistency
       await fetchAnswers();
       
       toast({
@@ -653,8 +662,8 @@ const QuestionDetail = () => {
                               
                                {/* Approval buttons */}
                                <div className="flex gap-2 mt-3">
-                                 {/* Only show approve button for question author if no answer is approved yet */}
-                                 {user && question.author_id === user.id && !hasAuthorApprovedAnswer && answer.author_id !== user.id && (
+                                 {/* Only show approve button for question author if no answer is approved yet and this answer isn't already approved */}
+                                 {user && question.author_id === user.id && !hasAuthorApprovedAnswer && answer.author_id !== user.id && !answer.approved_by_author && (
                                    <Button
                                      size="sm"
                                      variant="outline"
@@ -665,8 +674,8 @@ const QuestionDetail = () => {
                                      Accept Answer
                                    </Button>
                                  )}
-                                 {/* Only show teacher approve button if no answer is teacher approved yet */}
-                                 {user && userProfile?.role === 'teacher' && !hasTeacherApprovedAnswer && (
+                                 {/* Only show teacher approve button if no answer is teacher approved yet and this answer isn't already teacher approved */}
+                                 {user && userProfile?.role === 'teacher' && !hasTeacherApprovedAnswer && !answer.teacher_approved && (
                                    <Button
                                      size="sm"
                                      variant="outline"
