@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/199ba06c-d186-4948-89bf-2d4c73737014
+**URL**: https://uysd-warungsoal.lovable.app/
 
 ## How can I edit this code?
 
