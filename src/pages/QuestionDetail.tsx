@@ -680,14 +680,14 @@ const QuestionDetail = () => {
                       </Button>
                     </div>
                     
-                     <Button 
-                       onClick={handleSubmitAnswer}
-                       disabled={submittingAnswer}
-                       className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
-                     >
-                       <Send className="h-4 w-4 mr-2" />
-                       {submittingAnswer ? "Submitting..." : `Submit Answer (+${getEXPReward('answer', question?.difficulty || 'medium')} EXP)`}
-                     </Button>
+                      <Button 
+                        onClick={handleSubmitAnswer}
+                        disabled={submittingAnswer}
+                        className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        {submittingAnswer ? "Submitting..." : "Submit Answer"}
+                      </Button>
                   </div>
                 </div>
               </CardContent>
