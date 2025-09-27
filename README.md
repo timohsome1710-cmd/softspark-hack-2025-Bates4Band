@@ -17,3 +17,7 @@ Team Member (Bates4band):
 2. Gerrard Simanungkalit
 3. Israel Sinurat
 4. Joel Brian N.
+
+Testing account:
+timopalsu@gmail.com (123456)
+timohsome@gmail.com (123456)
