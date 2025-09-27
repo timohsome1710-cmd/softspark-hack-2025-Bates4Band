@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ThumbsUp, ThumbsDown, MessageCircle, Award, CheckCircle2, Clock, Send, Image, Video, FileText, Home } from "lucide-react";
+import { ArrowLeft, ThumbsUp, ThumbsDown, MessageCircle, Award, CheckCircle2, Clock, Send, Image, Video, FileText, Home, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock question data
@@ -59,20 +60,24 @@ const mockQuestionData = {
 
 const QuestionDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [answerText, setAnswerText] = useState("");
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [question, setQuestion] = useState<any>(null);
+  const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchQuestion = async () => {
+    const fetchQuestionAndAnswers = async () => {
       if (!id) return;
       
       setLoading(true);
       try {
-        const { data: question, error } = await supabase
+        // Fetch question
+        const { data: question, error: questionError } = await supabase
           .from("questions")
           .select(`
             *,
@@ -84,21 +89,37 @@ const QuestionDetail = () => {
           .eq("id", id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (questionError) throw questionError;
         if (!question) {
           setError("Question not found");
           return;
         }
         setQuestion(question);
+
+        // Fetch answers
+        const { data: answers, error: answersError } = await supabase
+          .from("answers")
+          .select(`
+            *,
+            profiles!answers_author_id_fkey (
+              display_name,
+              avatar_url
+            )
+          `)
+          .eq("question_id", id)
+          .order("created_at", { ascending: false });
+
+        if (answersError) throw answersError;
+        setAnswers(answers || []);
       } catch (error) {
-        console.error("Error fetching question:", error);
+        console.error("Error fetching data:", error);
         setError("Question not found");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchQuestion();
+    fetchQuestionAndAnswers();
   }, [id]);
 
   if (loading) {
@@ -130,20 +151,51 @@ const QuestionDetail = () => {
   }
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Easy": return "bg-exp-easy text-white";
-      case "Medium": return "bg-exp-medium text-white";
-      case "Hard": return "bg-exp-hard text-white";
+    switch (difficulty.toLowerCase()) {
+      case "easy": return "bg-green-500 text-white";
+      case "medium": return "bg-yellow-500 text-white";
+      case "hard": return "bg-red-500 text-white";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Math": return "🔢";
-      case "Science": return "🔬";
-      case "Social": return "🏛️";
+    switch (category.toLowerCase()) {
+      case "math": return "🔢";
+      case "mathematics": return "🔢";
+      case "science": return "🔬";
+      case "social": return "🏛️";
+      case "social studies": return "🏛️";
       default: return "📚";
+    }
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!question || !user || question.author_id !== user.id) return;
+    
+    if (!confirm("Are you sure you want to delete this question?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("questions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Question deleted",
+        description: "Your question has been successfully deleted.",
+      });
+      
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete question. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -157,17 +209,54 @@ const QuestionDetail = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to submit an answer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmittingAnswer(true);
     
-    // Simulate API call
-    setTimeout(() => {
-       toast({
-         title: "Answer submitted! 🎉",
-         description: "You earned 100 EXP for helping a fellow student!",
-       });
+    try {
+      const { data, error } = await supabase
+        .from("answers")
+        .insert({
+          question_id: id,
+          author_id: user.id,
+          content: answerText.trim(),
+        })
+        .select(`
+          *,
+          profiles!answers_author_id_fkey (
+            display_name,
+            avatar_url
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+
+      // Add the new answer to the list
+      setAnswers(prev => [data, ...prev]);
       setAnswerText("");
+      
+      toast({
+        title: "Answer submitted! 🎉",
+        description: "Thank you for helping a fellow student!",
+      });
+    } catch (error) {
+      console.error("Error submitting answer:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit answer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setSubmittingAnswer(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -208,6 +297,16 @@ const QuestionDetail = () => {
                       {question.title}
                     </h1>
                   </div>
+                  {user && question.author_id === user.id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeleteQuestion}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -215,6 +314,57 @@ const QuestionDetail = () => {
                   <p className="text-foreground whitespace-pre-line leading-relaxed">
                     {question.content}
                   </p>
+                  
+                  {/* Display LaTeX content */}
+                  {question.latex_content && (
+                    <div className="mt-4 p-4 bg-muted rounded-lg">
+                      <h4 className="font-semibold mb-2">LaTeX Content:</h4>
+                      <code className="text-sm">{question.latex_content}</code>
+                    </div>
+                  )}
+                  
+                  {/* Display media files */}
+                  {(question.images?.length > 0 || question.videos?.length > 0 || question.media_files?.length > 0) && (
+                    <div className="mt-6 space-y-4">
+                      {/* Images */}
+                      {question.images?.map((image: string, index: number) => (
+                        <div key={index} className="border rounded-lg p-2">
+                          <img src={image} alt={`Question image ${index + 1}`} className="max-w-full h-auto rounded" />
+                        </div>
+                      ))}
+                      
+                      {/* Videos */}
+                      {question.videos?.map((video: string, index: number) => (
+                        <div key={index} className="border rounded-lg p-2">
+                          <video controls className="max-w-full h-auto rounded">
+                            <source src={video} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      ))}
+                      
+                      {/* Media files */}
+                      {question.media_files?.map((file: string, index: number) => {
+                        const mediaType = question.media_types?.[index] || 'file';
+                        return (
+                          <div key={index} className="border rounded-lg p-2">
+                            {mediaType === 'image' ? (
+                              <img src={file} alt={`Media ${index + 1}`} className="max-w-full h-auto rounded" />
+                            ) : mediaType === 'video' ? (
+                              <video controls className="max-w-full h-auto rounded">
+                                <source src={file} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <a href={file} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                View File {index + 1}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 
                 <Separator className="my-6" />
@@ -245,16 +395,53 @@ const QuestionDetail = () => {
               <div className="flex items-center gap-2">
                  <MessageCircle className="h-5 w-5 text-primary" />
                  <h2 className="text-xl font-bold">
-                   0 Answers
+                   {answers.length} Answer{answers.length !== 1 ? 's' : ''}
                  </h2>
                </div>
 
-               <Card>
-                 <CardContent className="pt-6 text-center text-muted-foreground">
-                   <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                   <p>No answers yet. Be the first to help!</p>
-                 </CardContent>
-               </Card>
+               {answers.length === 0 ? (
+                 <Card>
+                   <CardContent className="pt-6 text-center text-muted-foreground">
+                     <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                     <p>No answers yet. Be the first to help!</p>
+                   </CardContent>
+                 </Card>
+               ) : (
+                 <div className="space-y-4">
+                   {answers.map((answer) => (
+                     <Card key={answer.id}>
+                       <CardContent className="pt-6">
+                         <div className="flex items-start gap-4">
+                           <Avatar className="h-8 w-8">
+                             <AvatarImage src={answer.profiles?.avatar_url} alt={answer.profiles?.display_name} />
+                             <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm">
+                               {answer.profiles?.display_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                             </AvatarFallback>
+                           </Avatar>
+                           <div className="flex-1">
+                             <div className="flex items-center gap-2 mb-2">
+                               <span className="font-medium">{answer.profiles?.display_name || 'Unknown User'}</span>
+                               <Badge variant="outline" className="text-xs">Lv. 1</Badge>
+                               <span className="text-xs text-muted-foreground">
+                                 {new Date(answer.created_at).toLocaleDateString()}
+                               </span>
+                               {answer.approved_by_author && (
+                                 <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                   <CheckCircle2 className="mr-1 h-3 w-3" />
+                                   Accepted
+                                 </Badge>
+                               )}
+                             </div>
+                             <p className="text-foreground whitespace-pre-line leading-relaxed">
+                               {answer.content}
+                             </p>
+                           </div>
+                         </div>
+                       </CardContent>
+                     </Card>
+                   ))}
+                 </div>
+               )}
             </div>
 
             {/* Answer Form */}
@@ -314,7 +501,7 @@ const QuestionDetail = () => {
                 </div>
                  <div className="flex items-center justify-between">
                    <span className="text-muted-foreground">Answers</span>
-                   <span className="font-medium">0</span>
+                   <span className="font-medium">{answers.length}</span>
                  </div>
                  <div className="flex items-center justify-between">
                    <span className="text-muted-foreground">EXP Reward</span>
