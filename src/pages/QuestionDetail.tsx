@@ -316,6 +316,29 @@ const QuestionDetail = () => {
       return;
     }
 
+    // Check if another answer is already approved for this question
+    if (approvalType === 'author') {
+      const hasApprovedAnswer = answers.some(a => a.approved_by_author);
+      if (hasApprovedAnswer) {
+        toast({
+          title: "Already Approved",
+          description: "You have already accepted an answer for this question",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (approvalType === 'teacher') {
+      const hasTeacherApproved = answers.some(a => a.teacher_approved);
+      if (hasTeacherApproved) {
+        toast({
+          title: "Already Approved",
+          description: "A teacher has already approved an answer for this question",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       const updateData = approvalType === 'author' 
         ? { approved_by_author: true, approved_by: user?.id, approved_at: new Date().toISOString() }
@@ -356,6 +379,10 @@ const QuestionDetail = () => {
       });
     }
   };
+
+  // Helper functions to check if answers are already approved
+  const hasAuthorApprovedAnswer = answers.some(a => a.approved_by_author);
+  const hasTeacherApprovedAnswer = answers.some(a => a.teacher_approved);
 
   const fetchAnswers = async () => {
     if (!id) return;
@@ -624,32 +651,33 @@ const QuestionDetail = () => {
                                 {answer.content}
                               </p>
                               
-                              {/* Approval buttons */}
-                              <div className="flex gap-2 mt-3">
-                                {/* Only show approve button for question author and non-author answers */}
-                                {user && question.author_id === user.id && !answer.approved_by_author && answer.author_id !== user.id && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleApproveAnswer(answer.id, 'author')}
-                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Accept Answer
-                                  </Button>
-                                )}
-                                {user && userProfile?.role === 'teacher' && !answer.teacher_approved && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleApproveAnswer(answer.id, 'teacher')}
-                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Teacher Approve
-                                  </Button>
-                                )}
-                               </div>
+                               {/* Approval buttons */}
+                               <div className="flex gap-2 mt-3">
+                                 {/* Only show approve button for question author if no answer is approved yet */}
+                                 {user && question.author_id === user.id && !hasAuthorApprovedAnswer && answer.author_id !== user.id && (
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     onClick={() => handleApproveAnswer(answer.id, 'author')}
+                                     className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                   >
+                                     <CheckCircle2 className="h-4 w-4 mr-1" />
+                                     Accept Answer
+                                   </Button>
+                                 )}
+                                 {/* Only show teacher approve button if no answer is teacher approved yet */}
+                                 {user && userProfile?.role === 'teacher' && !hasTeacherApprovedAnswer && (
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     onClick={() => handleApproveAnswer(answer.id, 'teacher')}
+                                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                   >
+                                     <CheckCircle2 className="h-4 w-4 mr-1" />
+                                     Teacher Approve
+                                   </Button>
+                                 )}
+                                </div>
                                
                                {/* Reply System */}
                                <AnswerComments answerId={answer.id} />
