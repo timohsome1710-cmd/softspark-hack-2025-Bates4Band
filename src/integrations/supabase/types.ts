@@ -420,6 +420,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_user_exp: {
+        Args: { p_exp_amount: number; p_user_id: string }
+        Returns: undefined
+      }
+      calculate_level_from_total_exp: {
+        Args: { total_exp: number }
+        Returns: number
+      }
       demote_trophy_rank: {
         Args: { current_rank: Database["public"]["Enums"]["trophy_rank"] }
         Returns: Database["public"]["Enums"]["trophy_rank"]
@@ -435,6 +443,14 @@ export type Database = {
       get_next_trophy_threshold: {
         Args: { current_rank: Database["public"]["Enums"]["trophy_rank"] }
         Returns: number
+      }
+      get_trophy_display: {
+        Args: { rank: Database["public"]["Enums"]["trophy_rank"] }
+        Returns: {
+          color: string
+          name: string
+          next_threshold: number
+        }[]
       }
       get_trophy_rank_from_exp: {
         Args: { seasonal_exp: number }

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import AnswerComments from "@/components/AnswerComments";
+import UserLevel from "@/components/UserLevel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -352,13 +353,43 @@ const QuestionDetail = () => {
     try {
       const expReward = getEXPReward(action, difficulty);
       
-      const { error } = await supabase.rpc('award_user_exp', {
-        p_user_id: userId,
-        p_exp_amount: expReward
-      });
+      // Get current stats
+      const { data: currentStats } = await supabase
+        .from('user_stats')
+        .select('exp_points, seasonal_exp, total_exp')
+        .eq('user_id', userId)
+        .single();
 
-      if (error) {
-        console.error('Error awarding EXP:', error);
+      if (currentStats) {
+        // Update existing stats
+        const { error } = await supabase
+          .from('user_stats')
+          .update({
+            exp_points: currentStats.exp_points + expReward,
+            seasonal_exp: currentStats.seasonal_exp + expReward,
+            total_exp: (currentStats.total_exp || 0) + expReward,
+          })
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Error awarding EXP:', error);
+        }
+      } else {
+        // Create new stats record
+        const { error } = await supabase
+          .from('user_stats')
+          .insert({
+            user_id: userId,
+            exp_points: expReward,
+            seasonal_exp: expReward,
+            total_exp: expReward,
+            level: 1,
+            trophy_rank: 'bronze'
+          });
+
+        if (error) {
+          console.error('Error creating user stats:', error);
+        }
       }
     } catch (error) {
       console.error('Error in awardEXP:', error);
@@ -493,10 +524,12 @@ const QuestionDetail = () => {
                          {question.profiles?.display_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                        </AvatarFallback>
                      </Avatar>
-                     <div>
-                       <span className="font-medium">{question.profiles?.display_name || 'Unknown User'}</span>
-                       <Badge variant="outline" className="ml-2 text-xs">Lv. 1</Badge>
-                     </div>
+                      <div>
+                        <span className="font-medium">{question.profiles?.display_name || 'Unknown User'}</span>
+                        <div className="mt-1">
+                          <UserLevel userId={question.author_id} />
+                        </div>
+                      </div>
                    </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                      <Clock className="h-4 w-4" />
@@ -535,12 +568,12 @@ const QuestionDetail = () => {
                              </AvatarFallback>
                            </Avatar>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium">{answer.profiles?.display_name || 'Unknown User'}</span>
-                                <Badge variant="outline" className="text-xs">Lv. 1</Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(answer.created_at).toLocaleDateString()}
-                                </span>
+                               <div className="flex items-center gap-2 mb-2">
+                                 <span className="font-medium">{answer.profiles?.display_name || 'Unknown User'}</span>
+                                 <UserLevel userId={answer.author_id} />
+                                 <span className="text-xs text-muted-foreground">
+                                   {new Date(answer.created_at).toLocaleDateString()}
+                                 </span>
                                 {answer.approved_by_author && (
                                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                                     <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -560,7 +593,7 @@ const QuestionDetail = () => {
                               
                               {/* Approval buttons */}
                               <div className="flex gap-2 mt-3">
-                                {user && question.author_id === user.id && !answer.approved_by_author && (
+                                {user && question.author_id === user.id && !answer.approved_by_author && answer.author_id !== user.id && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -632,7 +665,7 @@ const QuestionDetail = () => {
                        className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
                      >
                        <Send className="h-4 w-4 mr-2" />
-                       {submittingAnswer ? "Submitting..." : "Submit Answer (+100 EXP)"}
+                       {submittingAnswer ? "Submitting..." : `Submit Answer (+${getEXPReward('answer', question?.difficulty || 'medium')} EXP)`}
                      </Button>
                   </div>
                 </div>
@@ -666,12 +699,12 @@ const QuestionDetail = () => {
                    <span className="text-muted-foreground">Answers</span>
                    <span className="font-medium">{answers.length}</span>
                  </div>
-                 <div className="flex items-center justify-between">
-                   <span className="text-muted-foreground">EXP Reward</span>
-                   <Badge className={getDifficultyColor(question.difficulty)}>
-                     100 EXP
-                   </Badge>
-                 </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">EXP Reward</span>
+                    <Badge className={getDifficultyColor(question.difficulty)}>
+                      {getEXPReward('question', question.difficulty)} EXP
+                    </Badge>
+                  </div>
                 
                 <Separator />
                 
