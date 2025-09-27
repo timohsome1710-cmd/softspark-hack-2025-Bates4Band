@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Upload, Image, Video, FileText, X, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 import MediaUpload from "./MediaUpload";
 
@@ -18,6 +20,7 @@ interface QuestionUploadModalProps {
 
 const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -59,11 +62,42 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to post a question.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Here you would save to Supabase with media and LaTeX
-      console.log("Saving question with media:", mediaFiles, "and LaTeX:", latexContent);
+      console.log("Saving question to database...");
+      
+      const { data, error } = await supabase
+        .from("questions")
+        .insert([
+          {
+            title: formData.title.trim(),
+            content: formData.content.trim(),
+            category: formData.category,
+            difficulty: formData.difficulty,
+            author_id: user.id,
+            media_files: mediaFiles.length > 0 ? mediaFiles : null,
+            media_types: mediaTypes.length > 0 ? mediaTypes : null,
+            latex_content: latexContent || null,
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+
+      console.log("Question saved successfully:", data);
       
       toast({
         title: "Question Posted! 🎉",
@@ -77,6 +111,7 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
       setLatexContent("");
       setOpen(false);
     } catch (error) {
+      console.error("Error posting question:", error);
       toast({
         title: "Error",
         description: "Failed to post question. Please try again.",
