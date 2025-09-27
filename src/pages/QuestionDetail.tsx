@@ -491,7 +491,7 @@ const QuestionDetail = () => {
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-3">
+                     <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg">{getCategoryIcon(question.category)}</span>
                        <Badge variant="outline" className="text-xs">
                          {question.category}
@@ -499,13 +499,19 @@ const QuestionDetail = () => {
                         <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
                           {question.difficulty} • {getEXPReward('approved_answer', question.difficulty)} EXP
                         </Badge>
+                        {hasAuthorApprovedAnswer && (
+                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
+                           <CheckCircle2 className="mr-1 h-3 w-3" />
+                           Solved
+                         </Badge>
+                       )}
                        {question.is_verified && (
                         <Badge variant="secondary" className="text-xs bg-level-gold/20 text-level-gold border-level-gold/30">
                           <CheckCircle2 className="mr-1 h-3 w-3" />
                           Verified
                         </Badge>
                       )}
-                    </div>
+                     </div>
                     <h1 className="text-2xl font-bold text-foreground mb-4">
                       {question.title}
                     </h1>
