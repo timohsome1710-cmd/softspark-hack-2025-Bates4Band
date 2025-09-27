@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* WarungSoal Design System - USYD Academic Theme */
+
+@layer base {
+  :root {
+    /* USYD Brand Colors */
+    --background: 250 250% 99%;
+    --foreground: 217 33% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 33% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 33% 17%;
+
+    /* USYD Navy Blue */
+    --primary: 217 44% 22%;
+    --primary-foreground: 0 0% 98%;
+
+    /* USYD Gold */
+    --secondary: 45 93% 58%;
+    --secondary-foreground: 217 44% 22%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Gold accent for achievements */
+    --accent: 45 93% 58%;
+    --accent-foreground: 217 44% 22%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 44% 22%;
+
+    --radius: 0.75rem;
+
+    /* Academic Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 44% 22%), hsl(217 54% 32%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 93% 58%), hsl(45 93% 68%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 44% 22%) 0%, hsl(217 54% 32%) 50%, hsl(45 93% 58%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.8), hsl(220 14% 96% / 0.4));
+
+    /* Experience Colors */
+    --exp-easy: 120 60% 50%;
+    --exp-medium: 35 91% 65%;
+    --exp-hard: 0 84% 60%;
+
+    /* Level Colors */
+    --level-bronze: 30 67% 44%;
+    --level-silver: 0 0% 60%;
+    --level-gold: 45 93% 58%;
+    --level-platinum: 260 60% 65%;
+    --level-diamond: 200 100% 70%;
+
+    /* Glass Effects */
+    --glass-bg: hsl(0 0% 100% / 0.7);
+    --glass-border: hsl(220 13% 91% / 0.5);
+
+    /* Shadows */
+    --shadow-card: 0 4px 20px hsl(217 44% 22% / 0.08);
+    --shadow-button: 0 2px 8px hsl(217 44% 22% / 0.15);
+    --shadow-hero: 0 20px 60px hsl(217 44% 22% / 0.2);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+  }
+
+  .dark {
+    --background: 217 33% 17%;
+    --foreground: 0 0% 98%;
+
+    --card: 217 33% 17%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 217 33% 17%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 45 93% 58%;
+    --primary-foreground: 217 33% 17%;
+
+    --secondary: 217 54% 32%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 217 30% 25%;
+    --muted-foreground: 220 9% 55%;
+
+    --accent: 45 93% 58%;
+    --accent-foreground: 217 33% 17%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217 30% 25%;
+    --input: 217 30% 25%;
+    --ring: 45 93% 58%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 33% 17%), hsl(217 44% 22%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 93% 58%), hsl(45 93% 48%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 33% 17%) 0%, hsl(217 44% 22%) 50%, hsl(45 93% 58%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(217 33% 17% / 0.8), hsl(217 30% 25% / 0.4));
+
+    /* Dark glass effects */
+    --glass-bg: hsl(217 33% 17% / 0.7);
+    --glass-border: hsl(217 30% 25% / 0.5);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
