@@ -365,15 +365,12 @@ const QuestionDetail = () => {
         await awardEXP(answer.author_id, 'approved_answer', question.difficulty);
       }
 
-      // Update the local state immediately for better UX
+      // Update the local state first to prevent UI flickering
       setAnswers(prevAnswers => 
         prevAnswers.map(a => 
           a.id === answerId ? { ...a, ...updateData } : a
         )
       );
-      
-      // Also refresh from database to ensure consistency
-      await fetchAnswers();
       
       toast({
         title: "Success",
@@ -643,18 +640,18 @@ const QuestionDetail = () => {
                                  <span className="text-xs text-muted-foreground">
                                    {new Date(answer.created_at).toLocaleDateString()}
                                  </span>
-                                {answer.approved_by_author && (
-                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                    <CheckCircle2 className="mr-1 h-3 w-3" />
-                                    Accepted by Author
-                                  </Badge>
-                                )}
-                                {answer.teacher_approved && (
-                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                                    <CheckCircle2 className="mr-1 h-3 w-3" />
-                                    Teacher Approved
-                                  </Badge>
-                                )}
+                                 {answer.approved_by_author && (
+                                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
+                                     <CheckCircle2 className="mr-1 h-3 w-3" />
+                                     Accepted by Author
+                                   </Badge>
+                                 )}
+                                 {answer.teacher_approved && (
+                                   <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                                     <CheckCircle2 className="mr-1 h-3 w-3" />
+                                     Teacher Approved
+                                   </Badge>
+                                 )}
                               </div>
                               <p className="text-foreground whitespace-pre-line leading-relaxed">
                                 {answer.content}

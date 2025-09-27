@@ -113,11 +113,19 @@ const Index = () => {
 
     loadQuestions();
 
-    // Set up real-time subscription for new questions
+    // Set up real-time subscription for new questions and answer updates
     const channel = supabase
       .channel('questions-changes')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'questions' },
+        () => loadQuestions()
+      )
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'answers' },
+        () => loadQuestions()
+      )
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'answers' },
         () => loadQuestions()
       )
       .subscribe();

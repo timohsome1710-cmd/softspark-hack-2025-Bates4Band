@@ -84,7 +84,7 @@ const QuestionCard = ({ question }: QuestionCardProps) => {
                   {question.difficulty} • {getExpPoints(question.difficulty)} EXP
                 </Badge>
                 {question.has_approved_answer && (
-                  <Badge variant="secondary" className="text-xs bg-level-gold/20 text-level-gold border-level-gold/30">
+                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Solved
                   </Badge>
