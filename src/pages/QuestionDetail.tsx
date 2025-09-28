@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ThumbsUp, ThumbsDown, MessageCircle, Award, CheckCircle2, Clock, Send, Image, Video, FileText, Home, Trash2 } from "lucide-react";
 import LaTeXRenderer from "@/components/LaTeXRenderer";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock question data
@@ -191,11 +192,14 @@ const QuestionDetail = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          {/* Show loading skeleton instead of text */}
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-32 w-full" />
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
           </div>
         </div>
       </div>
@@ -496,6 +500,15 @@ const QuestionDetail = () => {
     return 0;
   };
 
+  const getDifficultyEXP = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'easy': return 50;
+      case 'medium': return 100;
+      case 'hard': return 150;
+      default: return 50;
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -521,9 +534,9 @@ const QuestionDetail = () => {
                        <Badge variant="outline" className="text-xs">
                          {question.category}
                        </Badge>
-                        <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
-                          {question.difficulty} • {getEXPReward('approved_answer', question.difficulty)} EXP
-                        </Badge>
+                         <Badge className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
+                           {question.difficulty} • {getDifficultyEXP(question.difficulty)} EXP
+                         </Badge>
                         {question.has_approved_answer && (
                           <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -562,8 +575,10 @@ const QuestionDetail = () => {
                   {/* Display LaTeX content */}
                   {question.latex_content && (
                     <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <h4 className="font-semibold mb-2">LaTeX Content:</h4>
-                      <code className="text-sm">{question.latex_content}</code>
+                      <h4 className="font-semibold mb-2 text-foreground">LaTeX Content:</h4>
+                      <div className="bg-white p-3 rounded border">
+                        <LaTeXRenderer content={question.latex_content} />
+                      </div>
                     </div>
                   )}
                   

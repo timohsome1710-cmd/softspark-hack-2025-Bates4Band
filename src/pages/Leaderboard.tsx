@@ -297,60 +297,78 @@ const Leaderboard = () => {
               <TabsContent value="alltime">
                 <Card>
                   <CardHeader>
-                    <CardTitle>All-Time Rankings</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5" />
+                      All-Time Rankings
+                    </CardTitle>
                     <p className="text-muted-foreground">Rankings based on total EXP earned across all seasons</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {leaderboardData
-                        .sort((a, b) => b.total_exp - a.total_exp)
-                        .map((entry, index) => (
-                           <div
-                             key={`alltime-${entry.user_id}`}
-                             className={`flex items-center justify-between p-5 rounded-2xl border-2 bg-gradient-to-r hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
-                               entry.user_id === user.id 
-                                 ? 'ring-2 ring-primary from-primary/10 to-secondary/10 border-primary/30' 
-                                 : 'from-card to-muted/30 border-border hover:border-secondary/30'
-                             }`}
-                           >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center w-10">
-                                <span className="text-lg font-bold text-muted-foreground">{index + 1}</span>
-                              </div>
-                              
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={entry.avatar_url} alt={entry.display_name} />
-                                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold">
-                                  {getInitials(entry.display_name)}
-                                </AvatarFallback>
-                              </Avatar>
+                    {loadingData ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Loading leaderboard...
+                      </div>
+                    ) : leaderboardData.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No leaderboard data available
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {leaderboardData
+                          .sort((a, b) => b.total_exp - a.total_exp)
+                          .map((entry, index) => (
+                            <div
+                              key={`alltime-${entry.user_id}`}
+                              className={`flex items-center justify-between p-4 rounded-xl border-2 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                                entry.user_id === user.id 
+                                  ? 'ring-2 ring-primary bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30' 
+                                  : 'bg-gradient-to-r from-card to-muted/20 border-border hover:border-primary/20'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-8">
+                                  {getRankIcon(index + 1)}
+                                </div>
+                                
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src={entry.avatar_url} alt={entry.display_name} />
+                                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 font-bold">
+                                    {getInitials(entry.display_name)}
+                                  </AvatarFallback>
+                                </Avatar>
 
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-lg">{entry.display_name}</span>
-                                  {entry.user_id === user.id && (
-                                    <Badge variant="secondary" className="text-xs">You</Badge>
-                                  )}
-                                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                                    Level {entry.level}
-                                  </Badge>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold">{entry.display_name}</span>
+                                    {entry.user_id === user.id && (
+                                      <Badge variant="secondary" className="text-xs">You</Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs">
+                                      Lv. {entry.level}
+                                    </Badge>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`uppercase text-xs font-bold ${getTrophyRankInfo(entry.trophy_rank).color} ${getTrophyRankInfo(entry.trophy_rank).border} border`}
+                                    >
+                                      {entry.trophy_rank}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {entry.questions_answered} answers • {entry.seasonal_exp} season EXP
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                  <span>🏅 {entry.questions_answered} Answers</span>
-                                  <span>⚡ {entry.seasonal_exp} Season EXP</span>
+                              </div>
+
+                              <div className="text-right">
+                                <div className="text-xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+                                  {entry.total_exp}
                                 </div>
+                                <div className="text-xs text-muted-foreground font-medium">Total EXP</div>
                               </div>
                             </div>
-
-                             <div className="text-right">
-                               <div className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                                 {entry.total_exp}
-                               </div>
-                               <div className="text-sm text-muted-foreground font-medium">Total EXP</div>
-                             </div>
-                          </div>
-                        ))}
-                    </div>
+                          ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

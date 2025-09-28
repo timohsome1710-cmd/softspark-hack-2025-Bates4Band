@@ -490,19 +490,20 @@ const Messages = () => {
 
               {/* Find Friends Tab */}
               <TabsContent value="find" className="flex-1 flex flex-col mt-0">
-                <ScrollArea className="flex-1">
-                  <div className="p-3 border-b">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search by name..."
-                        value={friendSearchTerm}
-                        onChange={(e) => setFriendSearchTerm(e.target.value)}
-                        className="pl-10 border-gray-300 rounded-lg"
-                      />
-                    </div>
+                {/* Search bar at the top */}
+                <div className="p-3 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by name..."
+                      value={friendSearchTerm}
+                      onChange={(e) => setFriendSearchTerm(e.target.value)}
+                      className="pl-10 border-gray-300 rounded-lg"
+                    />
                   </div>
-                  
+                </div>
+                
+                <ScrollArea className="flex-1">
                   {searchResults.length === 0 && friendSearchTerm ? (
                     <div className="p-6 text-center text-gray-500">
                       <Search className="h-12 w-12 mx-auto mb-3 opacity-30" />
