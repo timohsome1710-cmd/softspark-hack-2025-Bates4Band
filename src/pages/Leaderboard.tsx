@@ -9,6 +9,7 @@ import { Trophy, Medal, Award, Crown, ArrowLeft, RefreshCw, Zap, Home } from "lu
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import TrophyRanks from "@/components/TrophyRanks";
 
 interface LeaderboardEntry {

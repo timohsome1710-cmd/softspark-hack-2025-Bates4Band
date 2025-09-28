@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ThumbsUp, ThumbsDown, MessageCircle, Award, CheckCircle2, Clock, Send, Image, Video, FileText, Home, Trash2 } from "lucide-react";
 import LaTeXRenderer from "@/components/LaTeXRenderer";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock question data
 const mockQuestionData = {
@@ -495,15 +496,6 @@ const QuestionDetail = () => {
     return 0;
   };
 
-  const getEXPReward = (action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {
-    const baseRewards = {
-      question: { easy: 50, medium: 100, hard: 150 },
-      answer: { easy: 50, medium: 75, hard: 100 },
-      approved_answer: { easy: 100, medium: 150, hard: 200 }
-    };
-    
-    return baseRewards[action][difficulty as keyof typeof baseRewards[typeof action]] || 50;
-  };
 
   return (
     <div className="min-h-screen bg-background">

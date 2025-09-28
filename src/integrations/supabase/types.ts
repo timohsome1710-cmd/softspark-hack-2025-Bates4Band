@@ -479,6 +479,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_question_exp: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       award_user_exp: {
         Args: { p_exp_amount: number; p_user_id: string }
         Returns: undefined

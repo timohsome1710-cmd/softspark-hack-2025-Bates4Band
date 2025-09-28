@@ -99,6 +99,11 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
 
       console.log("Question saved successfully:", data);
       
+      // Award EXP for asking question
+      if (user?.id) {
+        await supabase.rpc('award_question_exp', { p_user_id: user.id });
+      }
+      
       toast({
         title: "Question Posted! 🎉",
         description: `Your question is now live and students can start answering to help you earn ${expectedExp} EXP!`,
