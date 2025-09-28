@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import warungsoalLogo from "@/assets/warungsoal-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -162,22 +163,40 @@ const Auth = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/50 to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-secondary/10 to-primary/10 rounded-full blur-3xl"></div>
+      </div>
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
-              <BookOpen className="h-6 w-6 text-primary-foreground" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur-lg opacity-30"></div>
+              <img 
+                src={warungsoalLogo} 
+                alt="WarungSoal Logo" 
+                className="relative h-16 w-16 rounded-2xl shadow-lg"
+              />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-primary">WarungSoal</h1>
-          <p className="text-muted-foreground">USYD Academic Community</p>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              WarungSoal
+            </h1>
+            <p className="text-muted-foreground font-medium">University of Sydney Academic Community</p>
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-1 w-8 bg-gradient-to-r from-primary to-transparent rounded-full"></div>
+              <div className="h-1 w-4 bg-gradient-to-r from-secondary to-transparent rounded-full"></div>
+            </div>
+          </div>
         </div>
 
 
         {/* Main Auth Tabs */}
-        <Card>
+        <Card className="relative backdrop-blur-sm bg-card/90 border border-border/50 shadow-2xl">
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>

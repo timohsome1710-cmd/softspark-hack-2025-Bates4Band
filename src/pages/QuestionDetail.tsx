@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ThumbsUp, ThumbsDown, MessageCircle, Award, CheckCircle2, Clock, Send, Image, Video, FileText, Home, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import LaTeXRenderer from "@/components/LaTeXRenderer";
 
 // Mock question data
 const mockQuestionData = {
@@ -189,8 +189,13 @@ const QuestionDetail = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+        <div className="container mx-auto px-4 py-8">
+          {/* Show loading skeleton instead of text */}
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
         </div>
       </div>
     );
@@ -464,47 +469,30 @@ const QuestionDetail = () => {
     try {
       const expReward = getEXPReward(action, difficulty);
       
-      // Get current stats
-      const { data: currentStats } = await supabase
-        .from('user_stats')
-        .select('exp_points, seasonal_exp, total_exp')
-        .eq('user_id', userId)
-        .single();
-
-      if (currentStats) {
-        // Update existing stats
-        const { error } = await supabase
-          .from('user_stats')
-          .update({
-            exp_points: currentStats.exp_points + expReward,
-            seasonal_exp: currentStats.seasonal_exp + expReward,
-            total_exp: (currentStats.total_exp || 0) + expReward,
-          })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Error awarding EXP:', error);
-        }
-      } else {
-        // Create new stats record
-        const { error } = await supabase
-          .from('user_stats')
-          .insert({
-            user_id: userId,
-            exp_points: expReward,
-            seasonal_exp: expReward,
-            total_exp: expReward,
-            level: 1,
-            trophy_rank: 'bronze'
-          });
-
-        if (error) {
-          console.error('Error creating user stats:', error);
-        }
-      }
+      await supabase.rpc('award_user_exp', {
+        p_user_id: userId,
+        p_exp_amount: expReward
+      });
     } catch (error) {
-      console.error('Error in awardEXP:', error);
+      console.error('Error awarding EXP:', error);
     }
+  };
+
+  const getEXPReward = (action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {
+    if (action === 'question') {
+      return 50; // Fixed 50 EXP for asking questions
+    } else if (action === 'answer') {
+      return 50; // Fixed 50 EXP for answering questions
+    } else if (action === 'approved_answer') {
+      // Additional bonus when answer is approved
+      switch (difficulty.toLowerCase()) {
+        case 'easy': return 25;
+        case 'medium': return 50;
+        case 'hard': return 75;
+        default: return 50;
+      }
+    }
+    return 0;
   };
 
   const getEXPReward = (action: 'question' | 'answer' | 'approved_answer', difficulty: string) => {

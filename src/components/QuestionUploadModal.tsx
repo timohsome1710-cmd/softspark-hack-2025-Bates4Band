@@ -110,6 +110,9 @@ const QuestionUploadModal = ({ trigger }: QuestionUploadModalProps) => {
       setMediaTypes([]);
       setLatexContent("");
       setOpen(false);
+      
+      // Refresh the page to show updated questions
+      window.location.reload();
     } catch (error) {
       console.error("Error posting question:", error);
       toast({

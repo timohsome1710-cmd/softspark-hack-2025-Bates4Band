@@ -9,7 +9,7 @@ import { Trophy, Medal, Award, Crown, ArrowLeft, RefreshCw, Zap, Home } from "lu
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import TrophyRanks from "@/components/TrophyRanks";
 
 interface LeaderboardEntry {
   rank: number;
@@ -205,34 +205,7 @@ const Leaderboard = () => {
             </Card>
 
             {/* Trophy Ranks */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Trophy Ranks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {[
-                    { rank: 'radiant', name: 'Radiant' },
-                    { rank: 'diamond', name: 'Diamond' },
-                    { rank: 'platinum', name: 'Platinum' },
-                    { rank: 'gold', name: 'Gold' },
-                    { rank: 'silver', name: 'Silver' },
-                    { rank: 'bronze', name: 'Bronze' },
-                  ].map((trophy) => {
-                    const info = getTrophyRankInfo(trophy.rank);
-                    return (
-                      <div key={trophy.rank} className={`flex items-center justify-between py-2 px-3 rounded-lg ${info.color} ${info.border} border transition-all hover:scale-105`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full ${info.badge}`} />
-                          <span className="font-medium">{trophy.name}</span>
-                        </div>
-                        <span className="text-xs font-semibold">{info.exp}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            <TrophyRanks />
           </div>
 
           {/* Main Content */}
